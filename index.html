@@ -4,83 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Expediente Emocional®</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
 <style>
 :root {
-  --bg:#F5F6FA; --surface:#FFFFFF; --surface2:#F0F2F8; --border:#E8EAF2;
-  --text:#16192A; --text2:#5A6075; --text3:#A0A8C0;
-  --primary:#4F6EF7; --primary-d:#3A55D4; --primary-l:#EEF1FE;
-  --teal:#00C2B8; --teal-l:#E0FAF9;
-  --green:#18C96A; --green-l:#E3FAF0;
-  --amber:#F5A623; --amber-l:#FEF4E0;
-  --rose:#F53B57; --rose-l:#FEE5EA;
-  --purple:#8B5CF6; --purple-l:#F0EBFE;
-  --shadow:0 2px 16px rgba(79,110,247,0.07);
-  --shadow-md:0 8px 40px rgba(79,110,247,0.13);
-  --shadow-lg:0 24px 64px rgba(79,110,247,0.18);
-  --r:18px; --r-sm:12px; --r-xs:8px;
+  --bg:#0E1117;--surface:#161B27;--surface2:#1E2535;--surface3:#252D40;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.05);
+  --text:#F0F4FF;--text2:#8B95B0;--text3:#4A5268;
+  --blue:#5B8EF0;--blue-d:#3D6FD4;--blue-l:rgba(91,142,240,0.12);
+  --teal:#00D4C8;--teal-l:rgba(0,212,200,0.12);
+  --green:#22D472;--green-l:rgba(34,212,114,0.12);
+  --amber:#F5B731;--amber-l:rgba(245,183,49,0.12);
+  --rose:#F05B7A;--rose-l:rgba(240,91,122,0.12);
+  --purple:#A855F7;--purple-l:rgba(168,85,247,0.12);
+  --grad1:linear-gradient(135deg,#5B8EF0,#A855F7);
+  --grad2:linear-gradient(135deg,#00D4C8,#5B8EF0);
+  --grad3:linear-gradient(135deg,#22D472,#00D4C8);
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg:0 16px 64px rgba(0,0,0,0.6);
+  --r:16px;--r-sm:10px;--r-xs:7px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+html,body{height:100%;font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+::selection{background:rgba(91,142,240,0.3);color:#fff}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px}
 
 /* ── LOGIN ── */
 #login-screen{
   display:flex;align-items:center;justify-content:center;min-height:100vh;
-  background:linear-gradient(135deg,#1a1f3c 0%,#2d3561 50%,#1a2744 100%);
+  background:radial-gradient(ellipse 120% 80% at 50% -20%,rgba(91,142,240,0.15) 0%,transparent 60%),
+             radial-gradient(ellipse 80% 60% at 80% 100%,rgba(168,85,247,0.1) 0%,transparent 60%),
+             var(--bg);
   position:relative;overflow:hidden;
 }
-#login-screen::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(79,110,247,0.25) 0%,transparent 70%);
-}
-#login-screen::after{
+.login-stars{position:absolute;inset:0;overflow:hidden}
+.login-stars::before,.login-stars::after{
   content:'';position:absolute;
-  width:600px;height:600px;border-radius:50%;
-  background:radial-gradient(circle,rgba(0,194,184,0.08) 0%,transparent 70%);
-  bottom:-200px;right:-100px;
+  background:radial-gradient(circle,rgba(255,255,255,0.8) 1px,transparent 1px);
+  background-size:48px 48px;
 }
+.login-stars::before{inset:0;opacity:.15}
+.login-stars::after{inset:0;background-size:72px 72px;opacity:.08}
+
 .login-card{
   position:relative;z-index:1;
-  background:rgba(255,255,255,0.06);
-  backdrop-filter:blur(24px);
-  border:1px solid rgba(255,255,255,0.12);
-  border-radius:28px;padding:52px 48px;
-  text-align:center;width:420px;
-  box-shadow:0 32px 80px rgba(0,0,0,0.4);
-  animation:slideUp .6s cubic-bezier(.22,1,.36,1) both;
+  background:rgba(22,27,39,0.9);
+  backdrop-filter:blur(32px);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:24px;padding:48px 44px;
+  width:420px;
+  box-shadow:0 40px 100px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.05);
+  animation:loginUp .7s cubic-bezier(.22,1,.36,1) both;
 }
-@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
-.login-logo{
-  width:56px;height:56px;background:var(--primary);border-radius:16px;
-  display:flex;align-items:center;justify-content:center;font-size:26px;
-  margin:0 auto 20px;box-shadow:0 8px 24px rgba(79,110,247,0.4);
+@keyframes loginUp{from{opacity:0;transform:translateY(40px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.login-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--blue-l);border:1px solid rgba(91,142,240,0.25);
+  border-radius:20px;padding:6px 14px;margin-bottom:28px;
+  font-size:12px;font-weight:600;color:var(--blue);letter-spacing:.5px;
 }
+.login-icon{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+
 .login-title{
-  font-family:'Instrument Serif',serif;font-size:32px;color:#fff;
-  margin-bottom:8px;line-height:1.1;
+  font-family:'Playfair Display',serif;font-size:34px;font-weight:900;
+  line-height:1.1;margin-bottom:10px;
+  background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.6) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
-.login-sub{color:rgba(255,255,255,0.5);font-size:14px;margin-bottom:36px;line-height:1.5}
-.login-divider{
-  display:flex;align-items:center;gap:12px;margin:28px 0;
+.login-sub{color:var(--text2);font-size:14px;line-height:1.6;margin-bottom:32px}
+
+.login-input{
+  width:100%;padding:14px 16px;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  color:var(--text);font-size:14px;font-family:'Sora',sans-serif;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+  margin-bottom:12px;
 }
-.login-divider span{flex:1;height:1px;background:rgba(255,255,255,0.1)}
-.login-divider p{color:rgba(255,255,255,0.3);font-size:12px}
-#login-error{
-  color:#F53B57;font-size:13px;margin-top:16px;padding:12px;
-  background:rgba(245,59,87,0.12);border-radius:var(--r-xs);
-  display:none;
+.login-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,142,240,0.15)}
+.login-input::placeholder{color:var(--text3)}
+
+.login-btn{
+  width:100%;padding:14px;border-radius:var(--r-sm);border:none;
+  background:var(--grad1);color:#fff;
+  font-size:14px;font-weight:700;font-family:'Sora',sans-serif;
+  cursor:pointer;transition:all .2s;letter-spacing:.3px;
+  position:relative;overflow:hidden;
 }
-.login-features{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:32px;
+.login-btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:.2s}
+.login-btn:hover::after{background:rgba(255,255,255,0.08)}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(91,142,240,0.4)}
+.login-btn:active{transform:translateY(0)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+.login-err{
+  display:none;color:var(--rose);font-size:13px;
+  padding:10px 14px;background:var(--rose-l);
+  border:1px solid rgba(240,91,122,0.2);
+  border-radius:var(--r-xs);margin-top:10px;
 }
-.login-feat{
-  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
-  border-radius:var(--r-sm);padding:12px;text-align:left;
-}
-.login-feat-icon{font-size:18px;margin-bottom:4px}
-.login-feat-text{color:rgba(255,255,255,0.6);font-size:11px;line-height:1.4}
+
+.login-features{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:28px;padding-top:24px;border-top:1px solid var(--border)}
+.lf-item{display:flex;align-items:flex-start;gap:8px}
+.lf-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.lf-text{font-size:11px;color:var(--text2);line-height:1.4}
 
 /* ── APP ── */
 #app{display:none;min-height:100vh}
@@ -88,95 +117,81 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:var(
 
 /* ── SIDEBAR ── */
 .sidebar{
-  width:260px;background:var(--text);
+  width:256px;background:var(--surface);
+  border-right:1px solid var(--border);
   display:flex;flex-direction:column;
   position:fixed;height:100vh;overflow-y:auto;z-index:200;
-  transition:transform .3s cubic-bezier(.22,1,.36,1);
 }
-.sidebar-top{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.08)}
-.sidebar-brand{display:flex;align-items:center;gap:12px}
-.brand-icon{
-  width:40px;height:40px;background:var(--primary);border-radius:12px;
-  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+.sb-top{padding:20px;border-bottom:1px solid var(--border)}
+.sb-brand{display:flex;align-items:center;gap:10px}
+.sb-logo{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:var(--grad1);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
 }
-.brand-name{color:#fff;font-weight:800;font-size:15px;line-height:1.1}
-.brand-tagline{color:rgba(255,255,255,0.35);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.sb-name{font-size:14px;font-weight:800;color:var(--text);line-height:1.1}
+.sb-tag{font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
 
-.user-chip{
-  margin:16px 20px 0;
-  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
-  border-radius:var(--r-sm);padding:12px 14px;
+.sb-user{
+  margin:14px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;
   display:flex;align-items:center;gap:10px;
 }
-.user-avatar{
-  width:36px;height:36px;border-radius:50%;
-  background:var(--primary);display:flex;align-items:center;justify-content:center;
-  font-weight:800;font-size:14px;color:#fff;flex-shrink:0;overflow:hidden;
+.sb-av{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;color:#fff;
 }
-.user-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.user-name{color:#fff;font-size:13px;font-weight:700;line-height:1.2}
-.user-role{font-size:10px;letter-spacing:0.8px;text-transform:uppercase;margin-top:2px}
-.role-rrhh{color:#F5A623}
-.role-lider{color:#00C2B8}
-.role-colaborador{color:#18C96A}
+.sb-uname{font-size:13px;font-weight:700;color:var(--text);line-height:1.1}
+.sb-urole{font-size:10px;letter-spacing:.8px;text-transform:uppercase;margin-top:3px;font-weight:600}
+.role-rrhh{color:var(--amber)}.role-lider{color:var(--teal)}.role-colaborador{color:var(--green)}
 
-.nav-body{padding:16px 12px;flex:1}
-.nav-section{
-  color:rgba(255,255,255,0.25);font-size:10px;letter-spacing:1.5px;
-  text-transform:uppercase;padding:14px 8px 6px;font-weight:700;
+.sb-nav{padding:12px;flex:1}
+.sb-section{
+  font-size:9px;letter-spacing:1.8px;text-transform:uppercase;
+  color:var(--text3);padding:14px 8px 6px;font-weight:700;
 }
-.nav-item{
+.sb-item{
   display:flex;align-items:center;gap:10px;
-  padding:10px 12px;border-radius:var(--r-sm);
-  color:rgba(255,255,255,0.5);font-size:13.5px;font-weight:500;
-  cursor:pointer;transition:all .18s;
+  padding:9px 12px;border-radius:var(--r-xs);
+  color:var(--text2);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .15s;
   border:none;background:none;width:100%;text-align:left;
 }
-.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff}
-.nav-item.active{background:var(--primary);color:#fff;font-weight:700;box-shadow:0 4px 16px rgba(79,110,247,0.35)}
-.nav-item .ni{font-size:16px;width:22px;text-align:center}
-.nav-badge{
-  margin-left:auto;background:var(--rose);color:#fff;
-  border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;
-}
+.sb-item:hover{background:var(--surface2);color:var(--text)}
+.sb-item.active{background:var(--blue-l);color:var(--blue);font-weight:700;border:1px solid rgba(91,142,240,0.2)}
+.sb-item .ic{font-size:15px;width:20px;text-align:center}
+.sb-badge{margin-left:auto;background:var(--rose);color:#fff;border-radius:12px;padding:1px 7px;font-size:10px;font-weight:700}
 
-.sidebar-footer{
-  padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08);
+.sb-footer{padding:14px;border-top:1px solid var(--border)}
+.sb-logout{
+  display:flex;align-items:center;gap:8px;color:var(--text3);
+  font-size:12px;cursor:pointer;background:none;border:none;
+  font-family:'Sora',sans-serif;padding:8px 10px;width:100%;
+  border-radius:var(--r-xs);transition:all .15s;
 }
-.logout-btn{
-  display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.35);
-  font-size:13px;cursor:pointer;background:none;border:none;
-  font-family:'Plus Jakarta Sans',sans-serif;padding:8px;width:100%;
-  border-radius:var(--r-xs);transition:all .18s;
-}
-.logout-btn:hover{color:var(--rose);background:rgba(245,59,87,0.08)}
+.sb-logout:hover{color:var(--rose);background:var(--rose-l)}
 
 /* ── MAIN ── */
-.main{margin-left:260px;flex:1;padding:32px;min-height:100vh}
+.main{margin-left:256px;flex:1;padding:28px 32px;min-height:100vh}
 
 /* ── TOPBAR ── */
-.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px}
-.page-title{font-family:'Instrument Serif',serif;font-size:30px;color:var(--text);line-height:1.1}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px}
+.page-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--text);line-height:1.1}
 .page-sub{color:var(--text2);font-size:13px;margin-top:5px}
-.topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-actions{display:flex;gap:10px;flex-shrink:0}
 
 /* ── BUTTONS ── */
-.btn{
-  padding:9px 18px;border-radius:var(--r-sm);
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .18s;
-  display:inline-flex;align-items:center;gap:6px;
-}
-.btn-primary{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(79,110,247,0.25)}
-.btn-primary:hover{background:var(--primary-d);transform:translateY(-1px);box-shadow:0 8px 24px rgba(79,110,247,0.35)}
-.btn-ghost{background:var(--surface);color:var(--text2);border:1.5px solid var(--border)}
-.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
-.btn-sm{padding:6px 14px;font-size:12px}
+.btn{padding:9px 18px;border-radius:var(--r-sm);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--grad1);color:#fff;box-shadow:0 4px 20px rgba(91,142,240,0.3)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(91,142,240,0.4)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
 
 /* ── VIEWS ── */
-.view{display:none;animation:fadeIn .3s ease}
+.view{display:none;animation:fadeSlide .35s cubic-bezier(.22,1,.36,1)}
 .view.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── GRIDS ── */
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
@@ -184,1103 +199,1005 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:var(
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
 .g21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
 .g12{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px}
-.g13{display:grid;grid-template-columns:1fr 3fr;gap:16px;margin-bottom:20px}
 .mb20{margin-bottom:20px}
 
 /* ── CARD ── */
 .card{
   background:var(--surface);border-radius:var(--r);
-  padding:24px;border:1px solid var(--border);
-  box-shadow:var(--shadow);
+  padding:22px;border:1px solid var(--border);
 }
-.card-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:18px;
-}
-.card-title{
-  font-size:12px;font-weight:800;color:var(--text2);
-  letter-spacing:.8px;text-transform:uppercase;
-}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.card-title{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.8px;text-transform:uppercase}
 
 /* ── KPI ── */
 .kpi{
   background:var(--surface);border-radius:var(--r);
-  padding:20px 22px;border:1px solid var(--border);
-  box-shadow:var(--shadow);position:relative;overflow:hidden;
+  padding:20px;border:1px solid var(--border);
+  position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s;
 }
-.kpi-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
-.kpi-icon{
-  width:42px;height:42px;border-radius:var(--r-sm);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;margin-bottom:14px;
+.kpi:hover{border-color:rgba(255,255,255,0.15);transform:translateY(-2px)}
+.kpi-glow{
+  position:absolute;top:-40px;right:-40px;
+  width:120px;height:120px;border-radius:50%;
+  opacity:.08;filter:blur(30px);
 }
-.kpi-label{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.4px;margin-bottom:6px}
-.kpi-val{font-family:'Instrument Serif',serif;font-size:40px;font-weight:400;line-height:1;color:var(--text)}
+.kpi-icon{width:38px;height:38px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.4px;margin-bottom:6px;text-transform:uppercase}
+.kpi-val{font-family:'Playfair Display',serif;font-size:38px;font-weight:900;line-height:1;color:var(--text)}
 .kpi-footer{display:flex;align-items:center;gap:8px;margin-top:10px}
-.kpi-trend{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px}
-.trend-up{background:var(--green-l);color:#0F9950}
-.trend-dn{background:var(--rose-l);color:#C41E37}
-.trend-neu{background:var(--surface2);color:var(--text2)}
+.kpi-trend{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.t-up{background:var(--green-l);color:#22D472}.t-dn{background:var(--rose-l);color:#F05B7A}.t-neu{background:var(--surface2);color:var(--text2)}
 .kpi-sub{font-size:11px;color:var(--text3)}
 
 /* ── BADGE ── */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.bg{background:var(--green-l);color:#0F9950}
-.ba{background:var(--amber-l);color:#92400E}
-.br{background:var(--rose-l);color:#9F1239}
-.bb{background:var(--primary-l);color:var(--primary)}
-.bt{background:var(--teal-l);color:#0F766E}
-.bp{background:var(--purple-l);color:#6D28D9}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.bg{background:var(--green-l);color:#22D472}
+.ba{background:var(--amber-l);color:#F5B731}
+.br{background:var(--rose-l);color:#F05B7A}
+.bb{background:var(--blue-l);color:#5B8EF0}
+.bt{background:var(--teal-l);color:#00D4C8}
+.bp{background:var(--purple-l);color:#A855F7}
 
 /* ── AVATAR ── */
-.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 
 /* ── TABLE ── */
 .tbl-wrap{overflow-x:auto;border-radius:var(--r-sm)}
 table{width:100%;border-collapse:collapse}
-th{background:var(--surface2);padding:11px 16px;text-align:left;font-size:11px;font-weight:800;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;white-space:nowrap}
-td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+th{background:var(--surface2);padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;white-space:nowrap}
+th:first-child{border-radius:var(--r-sm) 0 0 0}th:last-child{border-radius:0 var(--r-sm) 0 0}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border2);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--surface2)}
+tr:hover td{background:rgba(255,255,255,0.02)}
 
 /* ── PROGRESS ── */
-.prog{background:var(--surface2);border-radius:20px;height:7px;overflow:hidden}
+.prog{background:var(--surface2);border-radius:20px;height:6px;overflow:hidden}
 .prog-fill{height:100%;border-radius:20px;transition:width 1s ease}
 
 /* ── RING ── */
 .ring-wrap{position:relative;display:inline-block}
 .ring-wrap svg{transform:rotate(-90deg)}
 .ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-.ring-num{font-family:'Instrument Serif',serif;font-size:22px;line-height:1}
-.ring-lbl{font-size:9px;color:var(--text2);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.ring-num{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;line-height:1}
+.ring-lbl{font-size:9px;color:var(--text2);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
 
 /* ── DIM ROW ── */
-.dim-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.dim-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .dim-lbl{font-size:12px;color:var(--text2);width:110px;flex-shrink:0;font-weight:500}
-.dim-track{flex:1;background:var(--surface2);border-radius:20px;height:7px;overflow:hidden}
-.dim-fill{height:100%;border-radius:20px;transition:width .8s ease}
-.dim-num{font-size:12px;font-weight:800;width:28px;text-align:right;flex-shrink:0}
+.dim-track{flex:1;background:var(--surface2);border-radius:20px;height:6px;overflow:hidden}
+.dim-fill{height:100%;border-radius:20px;transition:width .9s ease}
+.dim-num{font-size:12px;font-weight:800;width:24px;text-align:right;flex-shrink:0}
 
 /* ── PILLS ── */
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.pill{
-  padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);
-  background:var(--surface);font-size:13px;font-weight:600;color:var(--text2);
-  cursor:pointer;transition:all .18s;
-}
-.pill.active{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
-.pill:hover{border-color:var(--primary);color:var(--primary)}
+.pill{padding:7px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .18s}
+.pill.active{border-color:var(--blue);background:var(--blue-l);color:var(--blue)}
+.pill:hover{border-color:var(--blue);color:var(--blue)}
 
-/* ── EMPTY ── */
-.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
-.empty-icon{font-size:36px;margin-bottom:10px}
+/* ── INSIGHT ── */
+.insight{
+  border-radius:var(--r-sm);padding:16px 18px;
+  display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;
+  border:1px solid transparent;transition:transform .2s;
+}
+.insight:hover{transform:translateX(4px)}
+.insight-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+.insight-title{font-size:13px;font-weight:700;margin-bottom:4px;line-height:1.3}
+.insight-text{font-size:12px;color:var(--text2);line-height:1.6}
+.insight-action{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:700;margin-top:8px;
+  padding:4px 10px;border-radius:20px;cursor:pointer;
+  border:none;background:rgba(255,255,255,0.08);color:var(--text);
+  font-family:'Sora',sans-serif;transition:all .15s;
+}
+.insight-action:hover{background:rgba(255,255,255,0.15)}
 
 /* ── ALERT FEED ── */
-.alert-feed-item{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
-.alert-feed-item:last-child{border-bottom:none}
-.alert-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.af-item{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border2)}
+.af-item:last-child{border-bottom:none}
+.af-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
 
-/* ── INSIGHT CARD ── */
-.insight{
-  border-radius:var(--r-sm);padding:16px;
-  display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;
-}
-.insight-icon{font-size:22px;flex-shrink:0}
-.insight-title{font-size:13px;font-weight:700;margin-bottom:3px}
-.insight-text{font-size:12px;color:var(--text2);line-height:1.5}
-
-/* ── CHECKIN PROMPT ── */
-.checkin-prompt{
-  background:linear-gradient(135deg,var(--primary) 0%,#7C3AED 100%);
-  border-radius:var(--r);padding:28px 32px;
+/* ── CHECKIN BANNER ── */
+.checkin-banner{
+  background:linear-gradient(135deg,rgba(91,142,240,0.15),rgba(168,85,247,0.1));
+  border:1px solid rgba(91,142,240,0.25);
+  border-radius:var(--r);padding:22px 28px;
   display:flex;align-items:center;justify-content:space-between;gap:20px;
-  margin-bottom:20px;box-shadow:0 8px 32px rgba(79,110,247,0.3);
+  margin-bottom:20px;position:relative;overflow:hidden;
 }
-.checkin-prompt-text h3{color:#fff;font-size:18px;font-weight:800;margin-bottom:4px}
-.checkin-prompt-text p{color:rgba(255,255,255,0.7);font-size:13px}
-.btn-white{background:#fff;color:var(--primary);font-weight:800;padding:12px 24px;border-radius:var(--r-sm);border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;transition:all .18s;white-space:nowrap}
-.btn-white:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2)}
+.checkin-banner::before{
+  content:'';position:absolute;top:-50%;right:-10%;
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,85,247,0.15),transparent 70%);
+  pointer-events:none;
+}
+.cb-text h3{color:var(--text);font-size:17px;font-weight:800;margin-bottom:4px}
+.cb-text p{color:var(--text2);font-size:13px}
+.cb-btn{
+  background:var(--grad1);color:#fff;border:none;
+  border-radius:var(--r-sm);padding:12px 24px;
+  font-size:13px;font-weight:800;cursor:pointer;
+  font-family:'Sora',sans-serif;white-space:nowrap;
+  transition:all .2s;flex-shrink:0;
+}
+.cb-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(91,142,240,0.4)}
 
-/* ── SCORE GAUGE ── */
-.score-section{text-align:center;padding:16px 0}
-.score-big{font-family:'Instrument Serif',serif;font-size:64px;line-height:1}
-.score-label{font-size:13px;color:var(--text2);margin-top:6px}
+/* ── SCORE BIG ── */
+.score-big{font-family:'Playfair Display',serif;font-size:56px;font-weight:900;line-height:1}
+
+/* ── SEARCH ── */
+.search-input{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-xs);padding:7px 12px;
+  color:var(--text);font-family:'Sora',sans-serif;font-size:13px;
+  outline:none;transition:border-color .2s;
+}
+.search-input:focus{border-color:var(--blue)}
 
 /* ── TOAST ── */
 #toast{
-  position:fixed;bottom:28px;right:28px;
-  background:var(--text);color:#fff;
-  padding:14px 20px;border-radius:var(--r-sm);
+  position:fixed;bottom:24px;right:24px;
+  background:var(--surface2);color:var(--text);
+  border:1px solid var(--border);
+  padding:12px 18px;border-radius:var(--r-sm);
   font-size:13px;font-weight:600;
   box-shadow:var(--shadow-lg);z-index:9999;
-  transform:translateY(80px);opacity:0;
-  transition:all .3s cubic-bezier(.22,1,.36,1);
-  max-width:320px;
+  transform:translateY(60px);opacity:0;
+  transition:all .3s cubic-bezier(.22,1,.36,1);max-width:300px;
 }
 #toast.show{transform:translateY(0);opacity:1}
 
-/* ── LOADING ── */
-.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3)}
-.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin-right:12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:10px;display:block}
 
 /* ── RESPONSIVE ── */
-@media(max-width:1200px){
-  .g4{grid-template-columns:repeat(2,1fr)}
-  .g3{grid-template-columns:repeat(2,1fr)}
-}
-@media(max-width:900px){
-  .sidebar{transform:translateX(-260px)}
-  .sidebar.open{transform:translateX(0)}
-  .main{margin-left:0;padding:20px}
-  .g21,.g12,.g13{grid-template-columns:1fr}
-  .g2{grid-template-columns:1fr}
-  .checkin-prompt{flex-direction:column}
-}
+@media(max-width:1200px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.sidebar{transform:translateX(-256px)}.main{margin-left:0;padding:20px}.g21,.g12{grid-template-columns:1fr}.g2{grid-template-columns:1fr}.checkin-banner{flex-direction:column}}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div id="login-screen">
+  <div class="login-stars"></div>
   <div class="login-card">
-    <div class="login-logo">💼</div>
+    <div class="login-badge"><span class="login-icon"></span> Sistema activo</div>
     <div class="login-title">Expediente<br>Emocional®</div>
-    <div class="login-sub">Plataforma de bienestar emocional laboral.<br>Inicia sesión con tu cuenta de Google.</div>
+    <div class="login-sub">Plataforma de bienestar emocional laboral.<br>Ingresa con tu correo registrado.</div>
 
-    <div style="margin-bottom:16px">
-      <input id="login-email" type="email" placeholder="tu@email.com"
-        style="width:100%;padding:14px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.15);
-        background:rgba(255,255,255,0.08);color:#fff;font-size:15px;font-family:'Plus Jakarta Sans',sans-serif;
-        outline:none;transition:border .2s"
-        onkeydown="if(event.key==='Enter')doLogin()"
-        onfocus="this.style.borderColor='rgba(79,110,247,0.8)'"
-        onblur="this.style.borderColor='rgba(255,255,255,0.15)'"
-      >
-    </div>
-    <button onclick="doLogin()" style="width:100%;padding:14px;border-radius:12px;border:none;
-      background:linear-gradient(135deg,#4F6EF7,#7C3AED);color:#fff;font-size:15px;font-weight:800;
-      cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;letter-spacing:.3px"
-      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(79,110,247,0.4)'"
-      onmouseout="this.style.transform='';this.style.boxShadow=''">
-      Entrar →
-    </button>
-
-    <div id="login-error" style="display:none;color:#F53B57;font-size:13px;margin-top:12px;padding:10px;
-      background:rgba(245,59,87,0.12);border-radius:8px">
-      ⚠️ Tu correo no está registrado. Contacta a RRHH.
-    </div>
-
-    <div class="login-divider"><span></span><p>Acceso seguro</p><span></span></div>
+    <input class="login-input" id="login-email" type="email" placeholder="tucorreo@empresa.com"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Ingresar al sistema →</button>
+    <div class="login-err" id="login-error">⚠️ Correo no registrado. Contacta a RRHH.</div>
 
     <div class="login-features">
-      <div class="login-feat">
-        <div class="login-feat-icon">🔒</div>
-        <div class="login-feat-text">Acceso seguro con tu cuenta institucional</div>
-      </div>
-      <div class="login-feat">
-        <div class="login-feat-icon">📊</div>
-        <div class="login-feat-text">Dashboard personalizado según tu rol</div>
-      </div>
-      <div class="login-feat">
-        <div class="login-feat-icon">🔔</div>
-        <div class="login-feat-text">Alertas y seguimiento en tiempo real</div>
-      </div>
-      <div class="login-feat">
-        <div class="login-feat-icon">🌱</div>
-        <div class="login-feat-text">Tu bienestar, visible y medible</div>
-      </div>
+      <div class="lf-item"><span class="lf-icon">🔐</span><span class="lf-text">Acceso por correo institucional</span></div>
+      <div class="lf-item"><span class="lf-icon">📊</span><span class="lf-text">Dashboard según tu rol</span></div>
+      <div class="lf-item"><span class="lf-icon">🧠</span><span class="lf-text">Interpretaciones con IA</span></div>
+      <div class="lf-item"><span class="lf-icon">🔔</span><span class="lf-text">Alertas en tiempo real</span></div>
     </div>
   </div>
 </div>
 
 <!-- APP -->
 <div id="app">
-  <div class="layout">
+<div class="layout">
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-top">
-        <div class="sidebar-brand">
-          <div class="brand-icon">💼</div>
-          <div>
-            <div class="brand-name">Expediente<br>Emocional®</div>
-            <div class="brand-tagline">V&A Consultores</div>
-          </div>
-        </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-brand">
+        <div class="sb-logo">💼</div>
+        <div><div class="sb-name">Expediente<br>Emocional®</div><div class="sb-tag">V&A Consultores</div></div>
+      </div>
+    </div>
+
+    <div class="sb-user">
+      <div class="sb-av" id="nav-av">?</div>
+      <div>
+        <div class="sb-uname" id="nav-name">—</div>
+        <div class="sb-urole" id="nav-role">—</div>
+      </div>
+    </div>
+
+    <div class="sb-nav" id="nav-body"></div>
+
+    <div class="sb-footer">
+      <button class="sb-logout" onclick="logout()">↩ Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ══ VISTA: MI BIENESTAR ══ -->
+    <div id="view-mi" class="view">
+      <div class="topbar">
+        <div><div class="page-title" id="mi-title">Mi Bienestar</div><div class="page-sub" id="mi-sub">—</div></div>
+        <div class="topbar-actions"><button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button></div>
       </div>
 
-      <div class="user-chip" id="user-chip">
-        <div class="user-avatar" id="nav-avatar">—</div>
-        <div>
-          <div class="user-name" id="nav-name">—</div>
-          <div class="user-role" id="nav-role">—</div>
+      <div class="checkin-banner" id="mi-banner">
+        <div class="cb-text">
+          <h3>¿Cómo te sientes esta semana?</h3>
+          <p>Tu check-in toma 2 minutos y es completamente confidencial.</p>
         </div>
+        <button class="cb-btn" id="mi-checkin-btn">Hacer Check-in →</button>
       </div>
 
-      <div class="nav-body" id="nav-body">
-        <!-- dinámico según rol -->
-      </div>
-
-      <div class="sidebar-footer">
-        <button class="logout-btn" onclick="logout()">
-          <span>↩</span> Cerrar sesión
-        </button>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="main" id="main-content">
-
-      <!-- ══ VISTA: MI BIENESTAR (todos) ══ -->
-      <div id="view-mi" class="view">
-        <div class="topbar">
-          <div>
-            <div class="page-title" id="mi-title">Mi Bienestar</div>
-            <div class="page-sub" id="mi-sub">—</div>
-          </div>
-          <div class="topbar-actions">
-            <button class="btn btn-ghost btn-sm" onclick="loadData()">↻ Actualizar</button>
-          </div>
-        </div>
-
-        <!-- Prompt check-in -->
-        <div class="checkin-prompt" id="mi-checkin-prompt">
-          <div class="checkin-prompt-text">
-            <h3>¿Cómo te sientes esta semana?</h3>
-            <p>Tu check-in toma solo 2 minutos y es completamente confidencial.</p>
-          </div>
-          <button class="btn-white" id="mi-checkin-btn" onclick="abrirCheckin()">
-            Hacer Check-in →
-          </button>
-        </div>
-
-        <div class="g3">
-          <!-- WHO-5 ring -->
-          <div class="card" style="text-align:center">
-            <div class="card-hdr"><div class="card-title">WHO-5 Actual</div></div>
-            <div class="ring-wrap" id="mi-ring-wrap">
-              <svg id="mi-ring-svg" width="130" height="130" viewBox="0 0 130 130">
-                <circle cx="65" cy="65" r="52" fill="none" stroke="var(--surface2)" stroke-width="10"/>
-                <circle id="mi-ring-fill" cx="65" cy="65" r="52" fill="none" stroke="var(--primary)" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 327"/>
+      <div class="g3">
+        <div class="card" style="text-align:center">
+          <div class="card-hdr"><div class="card-title">WHO-5 Actual</div></div>
+          <div style="margin:8px 0 12px">
+            <div class="ring-wrap">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--surface2)" stroke-width="9"/>
+                <circle cx="60" cy="60" r="48" fill="none" id="mi-ring" stroke="var(--blue)" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 302"/>
               </svg>
               <div class="ring-center">
                 <div class="ring-num" id="mi-who5-num">—</div>
                 <div class="ring-lbl">WHO-5</div>
               </div>
             </div>
-            <div id="mi-who5-badge" style="margin-top:8px">—</div>
-            <div style="color:var(--text3);font-size:12px;margin-top:6px" id="mi-who5-date">—</div>
           </div>
-
-          <!-- Clima -->
-          <div class="card" style="text-align:center">
-            <div class="card-hdr"><div class="card-title">Índice de Clima</div></div>
-            <div class="score-section">
-              <div class="score-big" id="mi-clima-num" style="color:var(--teal)">—</div>
-              <div class="score-label">Clima Afectivo</div>
-            </div>
-            <div id="mi-clima-badge" style="margin-top:4px">—</div>
-          </div>
-
-          <!-- Tendencia -->
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">Tendencia</div></div>
-            <div style="height:140px">
-              <canvas id="mi-trend-chart"></canvas>
-            </div>
-            <div id="mi-trend-insight" style="margin-top:12px;font-size:12px;color:var(--text2)"></div>
-          </div>
+          <div id="mi-who5-badge">—</div>
+          <div style="color:var(--text3);font-size:11px;margin-top:6px" id="mi-who5-date">—</div>
         </div>
 
-        <!-- Dimensiones -->
-        <div class="g2">
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">Dimensiones — Último Check-in</div></div>
-            <div id="mi-dims"><div class="empty"><div class="empty-icon">📊</div>Sin datos aún</div></div>
+        <div class="card" style="text-align:center">
+          <div class="card-hdr"><div class="card-title">Clima Afectivo</div></div>
+          <div style="padding:16px 0 12px">
+            <div class="score-big" id="mi-clima-num" style="color:var(--teal)">—</div>
+            <div style="color:var(--text2);font-size:12px;margin-top:6px">Índice de Clima</div>
           </div>
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">Mi Historial</div></div>
-            <div style="height:180px"><canvas id="mi-hist-chart"></canvas></div>
-          </div>
+          <div id="mi-clima-badge">—</div>
         </div>
 
-        <!-- Historial tabla -->
-        <div class="card mb20">
-          <div class="card-hdr">
-            <div class="card-title">Todos mis Check-ins</div>
-            <span id="mi-total-badge" class="badge bb">0 registros</span>
-          </div>
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr>
-                <th>Fecha</th><th>WHO-5</th><th>Clima</th>
-                <th>Energía</th><th>Estrés</th><th>Pertenencia</th>
-                <th>¿Qué me motivó?</th><th>¿Qué me drenó?</th><th>Estado</th>
-              </tr></thead>
-              <tbody id="mi-tabla"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Insights personales -->
         <div class="card">
-          <div class="card-hdr"><div class="card-title">💡 Insights Personales</div></div>
-          <div id="mi-insights"></div>
+          <div class="card-hdr"><div class="card-title">Tendencia</div></div>
+          <div style="height:130px"><canvas id="mi-trend-chart"></canvas></div>
+          <div id="mi-trend-text" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
         </div>
       </div>
 
-      <!-- ══ VISTA: MI EQUIPO (líder) ══ -->
-      <div id="view-equipo" class="view">
-        <div class="topbar">
-          <div>
-            <div class="page-title">Mi Equipo</div>
-            <div class="page-sub">Estado emocional de los colaboradores a tu cargo</div>
-          </div>
-          <div class="topbar-actions">
-            <button class="btn btn-ghost btn-sm" onclick="loadData()">↻ Actualizar</button>
-          </div>
-        </div>
-
-        <div class="g3">
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--primary)"></div>
-            <div class="kpi-icon" style="background:var(--primary-l)">👥</div>
-            <div class="kpi-label">WHO-5 Promedio Equipo</div>
-            <div class="kpi-val" id="eq-who5">—</div>
-            <div class="kpi-footer">
-              <span class="kpi-trend" id="eq-who5-badge">—</span>
-            </div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--teal)"></div>
-            <div class="kpi-icon" style="background:var(--teal-l)">🌡️</div>
-            <div class="kpi-label">Clima Afectivo Equipo</div>
-            <div class="kpi-val" id="eq-clima">—</div>
-            <div class="kpi-footer"><span class="kpi-sub">Índice promedio</span></div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--amber)"></div>
-            <div class="kpi-icon" style="background:var(--amber-l)">🔔</div>
-            <div class="kpi-label">Alertas Equipo</div>
-            <div class="kpi-val" id="eq-alertas">—</div>
-            <div class="kpi-footer"><span class="kpi-sub">Históricas totales</span></div>
-          </div>
-        </div>
-
-        <div class="g21">
-          <!-- Radar -->
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">Perfil Emocional Promedio del Equipo</div></div>
-            <div style="height:240px"><canvas id="eq-radar"></canvas></div>
-          </div>
-          <!-- WHO-5 barras -->
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">WHO-5 Individual</div></div>
-            <div id="eq-bars"></div>
-          </div>
-        </div>
-
-        <!-- Tabla equipo -->
-        <div class="card mb20">
-          <div class="card-hdr"><div class="card-title">Estado Individual del Equipo</div></div>
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr>
-                <th>Colaborador</th><th>WHO-5</th><th>Clima</th>
-                <th>Último check-in</th><th>Tendencia</th><th>Estado</th>
-              </tr></thead>
-              <tbody id="eq-tabla"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Evaluaciones del líder -->
+      <div class="g2">
         <div class="card">
-          <div class="card-hdr"><div class="card-title">Mis Evaluaciones</div></div>
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr>
-                <th>Colaborador</th><th>Cumplimiento</th><th>Semáforo</th>
-                <th>Colaboración</th><th>Disposición</th><th>Comentarios</th><th>Fecha</th>
-              </tr></thead>
-              <tbody id="eq-evals"></tbody>
-            </table>
-          </div>
+          <div class="card-hdr"><div class="card-title">Dimensiones — Último Check-in</div></div>
+          <div id="mi-dims"><div class="empty"><span class="empty-icon">📊</span>Sin datos aún</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Evolución WHO-5</div></div>
+          <div style="height:170px"><canvas id="mi-hist-chart"></canvas></div>
         </div>
       </div>
 
-      <!-- ══ VISTA: RRHH ══ -->
-      <div id="view-rrhh" class="view">
-        <div class="topbar">
-          <div>
-            <div class="page-title">Panel RRHH</div>
-            <div class="page-sub" id="rrhh-date">Resumen ejecutivo de la organización</div>
-          </div>
-          <div class="topbar-actions">
-            <button class="btn btn-ghost btn-sm" onclick="loadData()">↻ Actualizar</button>
-          </div>
+      <div class="card mb20">
+        <div class="card-hdr">
+          <div class="card-title">Todos mis Check-ins</div>
+          <span id="mi-total-badge" class="badge bb">0 registros</span>
         </div>
-
-        <div class="g4">
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--primary)"></div>
-            <div class="kpi-icon" style="background:var(--primary-l)">🧠</div>
-            <div class="kpi-label">WHO-5 Organizacional</div>
-            <div class="kpi-val" id="rk-who5">—</div>
-            <div class="kpi-footer">
-              <span class="kpi-trend" id="rk-who5-badge">—</span>
-              <span class="kpi-sub" id="rk-who5-label">—</span>
-            </div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--teal)"></div>
-            <div class="kpi-icon" style="background:var(--teal-l)">🌡️</div>
-            <div class="kpi-label">Clima Afectivo</div>
-            <div class="kpi-val" id="rk-clima">—</div>
-            <div class="kpi-footer"><span class="kpi-sub">Promedio org.</span></div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--green)"></div>
-            <div class="kpi-icon" style="background:var(--green-l)">👤</div>
-            <div class="kpi-label">Colaboradores Activos</div>
-            <div class="kpi-val" id="rk-activos">—</div>
-            <div class="kpi-footer"><span class="kpi-sub">En el sistema</span></div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-accent" style="background:var(--rose)"></div>
-            <div class="kpi-icon" style="background:var(--rose-l)">⚠️</div>
-            <div class="kpi-label">Alertas Abiertas</div>
-            <div class="kpi-val" id="rk-alertas">—</div>
-            <div class="kpi-footer"><span class="kpi-sub">Requieren atención</span></div>
-          </div>
-        </div>
-
-        <div class="g21">
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">Evolución Organizacional WHO-5 y Clima</div></div>
-            <div style="height:220px"><canvas id="rrhh-trend"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">Distribución de Alertas</div></div>
-            <div style="height:160px"><canvas id="rrhh-donut"></canvas></div>
-            <div id="rrhh-donut-legend" style="margin-top:12px"></div>
-          </div>
-        </div>
-
-        <!-- Tabla colaboradores -->
-        <div class="card mb20">
-          <div class="card-hdr">
-            <div class="card-title">Estado Individual</div>
-            <input id="rrhh-search" placeholder="🔍 Buscar colaborador..." style="border:1.5px solid var(--border);border-radius:var(--r-xs);padding:6px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface2)" oninput="filtrarTablaRRHH(this.value)">
-          </div>
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr>
-                <th>Colaborador</th><th>Rol</th><th>Área</th>
-                <th>WHO-5</th><th>Clima</th><th>Check-ins</th>
-                <th>Último registro</th><th>Estado</th>
-              </tr></thead>
-              <tbody id="rrhh-tabla"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="g2">
-          <!-- Alertas -->
-          <div class="card">
-            <div class="card-hdr"><div class="card-title">🔔 Alertas Recientes</div></div>
-            <div id="rrhh-alertas-feed"></div>
-          </div>
-          <!-- Registros RRHH -->
-          <div class="card">
-            <div class="card-hdr">
-              <div class="card-title">📋 Registros Psicométricos</div>
-            </div>
-            <div id="rrhh-psico-feed"></div>
-          </div>
-        </div>
-
-        <!-- Insights org -->
-        <div class="card">
-          <div class="card-hdr"><div class="card-title">💡 Insights Organizacionales</div></div>
-          <div id="rrhh-insights"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>WHO-5</th><th>Clima</th>
+              <th>Energía</th><th>Estrés</th><th>Pertenencia</th>
+              <th>Me motivó</th><th>Me drenó</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="mi-tabla"><tr><td colspan="9" class="empty">Sin registros</td></tr></tbody>
+          </table>
         </div>
       </div>
 
-    </main>
-  </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🧠 Análisis e Interpretaciones Personales</div></div>
+        <div id="mi-insights"></div>
+      </div>
+    </div>
+
+    <!-- ══ VISTA: MI EQUIPO (líder) ══ -->
+    <div id="view-equipo" class="view">
+      <div class="topbar">
+        <div><div class="page-title">Mi Equipo</div><div class="page-sub">Estado emocional de los colaboradores a tu cargo</div></div>
+        <div class="topbar-actions"><button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button></div>
+      </div>
+
+      <div class="g3">
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--blue)"></div>
+          <div class="kpi-icon" style="background:var(--blue-l)">👥</div>
+          <div class="kpi-label">WHO-5 Promedio Equipo</div>
+          <div class="kpi-val" id="eq-who5">—</div>
+          <div class="kpi-footer"><span class="kpi-trend" id="eq-who5-badge">—</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--teal)"></div>
+          <div class="kpi-icon" style="background:var(--teal-l)">🌡️</div>
+          <div class="kpi-label">Clima Afectivo Equipo</div>
+          <div class="kpi-val" id="eq-clima">—</div>
+          <div class="kpi-footer"><span class="kpi-sub">Índice promedio</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--amber)"></div>
+          <div class="kpi-icon" style="background:var(--amber-l)">🔔</div>
+          <div class="kpi-label">Alertas del Equipo</div>
+          <div class="kpi-val" id="eq-alertas">—</div>
+          <div class="kpi-footer"><span class="kpi-sub">Históricas totales</span></div>
+        </div>
+      </div>
+
+      <div class="g21">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Perfil Emocional Promedio</div></div>
+          <div style="height:240px"><canvas id="eq-radar"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">WHO-5 por Persona</div></div>
+          <div id="eq-bars" style="padding-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="card mb20">
+        <div class="card-hdr"><div class="card-title">Estado Individual del Equipo</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Colaborador</th><th>WHO-5</th><th>Clima</th>
+              <th>Último check-in</th><th>Tendencia</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="eq-tabla"><tr><td colspan="6" class="empty">Sin datos</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">📋 Mis Evaluaciones Registradas</div></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Colaborador</th><th>Cumplimiento</th><th>Semáforo</th><th>Comentarios</th><th>Fecha</th></tr></thead>
+              <tbody id="eq-evals"><tr><td colspan="5" class="empty">Sin evaluaciones</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🧠 Análisis del Equipo</div></div>
+          <div id="eq-insights"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VISTA: RRHH ══ -->
+    <div id="view-rrhh" class="view">
+      <div class="topbar">
+        <div><div class="page-title">Panel Ejecutivo</div><div class="page-sub" id="rrhh-date">Resumen organizacional</div></div>
+        <div class="topbar-actions"><button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button></div>
+      </div>
+
+      <div class="g4">
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--blue)"></div>
+          <div class="kpi-icon" style="background:var(--blue-l)">🧠</div>
+          <div class="kpi-label">WHO-5 Organizacional</div>
+          <div class="kpi-val" id="rk-who5">—</div>
+          <div class="kpi-footer"><span class="kpi-trend" id="rk-who5-trend">—</span><span class="kpi-sub" id="rk-who5-label">—</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--teal)"></div>
+          <div class="kpi-icon" style="background:var(--teal-l)">🌡️</div>
+          <div class="kpi-label">Clima Afectivo</div>
+          <div class="kpi-val" id="rk-clima">—</div>
+          <div class="kpi-footer"><span class="kpi-sub">Promedio org.</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--green)"></div>
+          <div class="kpi-icon" style="background:var(--green-l)">👤</div>
+          <div class="kpi-label">Colaboradores Activos</div>
+          <div class="kpi-val" id="rk-activos">—</div>
+          <div class="kpi-footer"><span class="kpi-sub" id="rk-participacion">—</span></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-glow" style="background:var(--rose)"></div>
+          <div class="kpi-icon" style="background:var(--rose-l)">⚠️</div>
+          <div class="kpi-label">Alertas Abiertas</div>
+          <div class="kpi-val" id="rk-alertas">—</div>
+          <div class="kpi-footer"><span class="kpi-sub">Requieren atención</span></div>
+        </div>
+      </div>
+
+      <div class="g21">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Evolución WHO-5 y Clima — Organización</div></div>
+          <div style="height:220px"><canvas id="rrhh-trend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Distribución de Alertas</div></div>
+          <div style="height:160px"><canvas id="rrhh-donut"></canvas></div>
+          <div id="rrhh-donut-legend" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="card mb20">
+        <div class="card-hdr">
+          <div class="card-title">Estado Individual</div>
+          <input class="search-input" placeholder="🔍 Buscar..." oninput="filtrarRRHH(this.value)">
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Colaborador</th><th>Rol</th><th>Área</th>
+              <th>WHO-5</th><th>Clima</th><th>Check-ins</th>
+              <th>Último registro</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="rrhh-tabla"><tr><td colspan="8" class="empty">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🔔 Alertas Recientes</div></div>
+          <div id="rrhh-alertas-feed"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">📋 Registros Psicométricos</div></div>
+          <div id="rrhh-psico-feed"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🧠 Análisis Organizacional — Interpretaciones</div></div>
+        <div id="rrhh-insights"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
 </div>
 
 <div id="toast"></div>
 
 <script>
 // ══════════════════════════════════════
-//  CONFIG — ACTUALIZA ESTOS VALORES
+//  CONFIG
 // ══════════════════════════════════════
-const SHEET_ID   = '1mbt_sgYWnF0Ga3s_KCy3SAVq8gQ0n9nbpz-VrHMZXv0';
-const API_KEY    = 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0';
-const CLIENT_ID  = '261344231037-ja21kolc9u33tjachubm9kcd85idt381.apps.googleusercontent.com'; // Google OAuth Client ID
-const RRHH_EMAIL = 'aimeehiguera10@gmail.com'; // Email RRHH de CONFIG
-
+const SHEET_ID = '1mbt_sgYWnF0Ga3s_KCy3SAVq8gQ0n9nbpz-VrHMZXv0';
+const API_KEY  = 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0';
 const TABS = {
-  colaboradores:'BD_Colaboradores',
-  checkins:'BD_CheckinColaboradores',
-  lideres:'BD_Lideres',
-  rrhh:'BD_RRHH',
-  alertas:'BD_Alertas',
-  lideresCat:'BD_Lideres_Catalogo',
+  colaboradores:'BD_Colaboradores', checkins:'BD_CheckinColaboradores',
+  lideres:'BD_Lideres', rrhh:'BD_RRHH', alertas:'BD_Alertas',
 };
 
 // ══════════════════════════════════════
-//  ESTADO
+//  STATE
 // ══════════════════════════════════════
-let USER   = null;
-let ROLE   = null;
-let EMPID  = null;
-let DATA   = {};
-let CHARTS = {};
+let USER=null, ROLE=null, EMPID=null, DATA={}, CHARTS={};
 
 // ══════════════════════════════════════
-//  LOGIN POR EMAIL
+//  LOGIN
 // ══════════════════════════════════════
-window.onload = () => { /* listo */ };
+window.onload = () => {};
 
 async function doLogin() {
-  const emailInput = document.getElementById('login-email');
-  const email = (emailInput?.value || '').toLowerCase().trim();
+  const email = (document.getElementById('login-email').value||'').toLowerCase().trim();
   const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
   errEl.style.display = 'none';
-  if (!email) {
-    errEl.textContent = '⚠️ Por favor ingresa tu correo.';
-    errEl.style.display = 'block';
-    return;
-  }
-  // Mostrar loading
-  const btn = document.querySelector('.login-submit-btn');
-  if (btn) { btn.textContent = 'Verificando...'; btn.disabled = true; }
+  if (!email) { errEl.textContent='⚠️ Ingresa tu correo.'; errEl.style.display='block'; return; }
+  btn.textContent='Verificando...'; btn.disabled=true;
   try {
     await loadData();
-    const emp = (DATA.colaboradores||[]).find(c =>
-      (c.email||'').toLowerCase().trim() === email
-    );
+    const emp = (DATA.colaboradores||[]).find(c=>(c.email||'').toLowerCase().trim()===email);
     if (!emp) {
-      errEl.textContent = '⚠️ Tu correo no está registrado. Contacta a RRHH.';
-      errEl.style.display = 'block';
-      if (btn) { btn.textContent = 'Entrar →'; btn.disabled = false; }
+      errEl.textContent='⚠️ Correo no registrado. Contacta a RRHH.';
+      errEl.style.display='block';
+      btn.textContent='Ingresar al sistema →'; btn.disabled=false;
       return;
     }
-    USER  = { email, name: `${emp.nombre} ${emp.apellido_paterno||''}`.trim(), pic:'' };
-    ROLE  = (emp.rol || 'colaborador').toLowerCase();
+    USER  = { email, name:`${emp.nombre} ${emp.apellido_paterno||''}`.trim() };
+    ROLE  = (emp.rol||'colaborador').toLowerCase();
     EMPID = emp.empleado_id;
     initApp();
   } catch(e) {
-    errEl.textContent = '⚠️ Error al conectar. Verifica tu conexión.';
-    errEl.style.display = 'block';
-    if (btn) { btn.textContent = 'Entrar →'; btn.disabled = false; }
-    console.error(e);
+    errEl.textContent='⚠️ Error de conexión. Intenta de nuevo.';
+    errEl.style.display='block';
+    btn.textContent='Ingresar al sistema →'; btn.disabled=false;
   }
 }
 
 function initApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  buildNav();
-  updateUserChip();
-  switchView(getDefaultView());
-  renderAll();
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  buildNav(); updateChip(); switchView(defaultView()); renderAll();
 }
 
 function logout() {
-  USER = null; ROLE = null; EMPID = null;
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  const errEl = document.getElementById('login-error');
-  if (errEl) errEl.style.display = 'none';
-  const emailInput = document.getElementById('login-email');
-  if (emailInput) emailInput.value = '';
+  USER=null; ROLE=null; EMPID=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-error').style.display='none';
+  document.getElementById('login-btn').textContent='Ingresar al sistema →';
+  document.getElementById('login-btn').disabled=false;
 }
 
 // ══════════════════════════════════════
-//  NAVEGACIÓN
+//  NAV
 // ══════════════════════════════════════
 function buildNav() {
-  const nav = document.getElementById('nav-body');
-  let html = '';
-
-  if (ROLE === 'rrhh') {
-    html += `<div class="nav-section">RRHH</div>
-    <button class="nav-item" onclick="switchView('rrhh',this)"><span class="ni">🏢</span>Panel Ejecutivo</button>`;
-  }
-  if (ROLE === 'lider' || ROLE === 'rrhh') {
-    html += `<div class="nav-section">Liderazgo</div>
-    <button class="nav-item" onclick="switchView('equipo',this)"><span class="ni">👥</span>Mi Equipo</button>`;
-  }
-  html += `<div class="nav-section">Personal</div>
-  <button class="nav-item" onclick="switchView('mi',this)"><span class="ni">💙</span>Mi Bienestar</button>`;
-  nav.innerHTML = html;
+  let html='';
+  if(ROLE==='rrhh') html+=`<div class="sb-section">RRHH</div><button class="sb-item" onclick="switchView('rrhh',this)"><span class="ic">🏢</span>Panel Ejecutivo</button>`;
+  if(ROLE==='lider'||ROLE==='rrhh') html+=`<div class="sb-section">Liderazgo</div><button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
+  html+=`<div class="sb-section">Personal</div><button class="sb-item" onclick="switchView('mi',this)"><span class="ic">💙</span>Mi Bienestar</button>`;
+  document.getElementById('nav-body').innerHTML=html;
 }
 
-function getDefaultView() {
-  if (ROLE === 'rrhh') return 'rrhh';
-  if (ROLE === 'lider') return 'equipo';
-  return 'mi';
+function defaultView() { return ROLE==='rrhh'?'rrhh':ROLE==='lider'?'equipo':'mi'; }
+
+function switchView(id, btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('view-'+id);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  else document.querySelectorAll('.sb-item').forEach(b=>{ if(b.getAttribute('onclick')?.includes("'"+id+"'")) b.classList.add('active'); });
 }
 
-function switchView(viewId, btn) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  const el = document.getElementById('view-'+viewId);
-  if (el) el.classList.add('active');
-  if (btn) btn.classList.add('active');
-  else {
-    document.querySelectorAll('.nav-item').forEach(b => {
-      if (b.getAttribute('onclick')?.includes(viewId)) b.classList.add('active');
-    });
-  }
-}
-
-function updateUserChip() {
-  const av = document.getElementById('nav-avatar');
+function updateChip() {
+  const av = document.getElementById('nav-av');
   const nm = document.getElementById('nav-name');
   const rl = document.getElementById('nav-role');
   nm.textContent = USER.name.split(' ')[0];
-  rl.textContent = ROLE;
-  rl.className = `user-role role-${ROLE}`;
-  if (USER.pic) {
-    av.innerHTML = `<img src="${USER.pic}" alt="">`;
-  } else {
-    av.textContent = USER.name.charAt(0).toUpperCase();
-  }
+  rl.textContent = ROLE; rl.className=`sb-urole role-${ROLE}`;
+  av.textContent = USER.name.charAt(0).toUpperCase();
+  const colors = {rrhh:['#F5B731','rgba(245,183,49,0.2)'],lider:['#00D4C8','rgba(0,212,200,0.2)'],colaborador:['#22D472','rgba(34,212,114,0.2)']};
+  const [c,bg] = colors[ROLE]||colors.colaborador;
+  av.style.background=bg; av.style.color=c; av.style.border=`2px solid ${c}44`;
 }
 
 // ══════════════════════════════════════
-//  DATA LOADING
+//  DATA
 // ══════════════════════════════════════
 async function fetchSheet(tab) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tab)}?key=${API_KEY}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(r.status);
-  const j = await r.json();
-  const rows = j.values || [];
-  if (rows.length < 2) return [];
-  const h = rows[0];
-  return rows.slice(1).map(row => {
-    const o = {};
-    h.forEach((k,i) => o[k] = row[i] ?? '');
-    return o;
-  });
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tab)}?key=${API_KEY}`;
+  const r=await fetch(url); if(!r.ok) throw new Error(r.status);
+  const j=await r.json(); const rows=j.values||[];
+  if(rows.length<2) return [];
+  const h=rows[0];
+  return rows.slice(1).map(row=>{ const o={}; h.forEach((k,i)=>o[k]=row[i]??''); return o; });
 }
 
 async function loadData() {
-  if (API_KEY === 'TU_API_KEY_AQUI') {
-    DATA = getDemoData();
-    return;
-  }
   try {
-    const [colaboradores, checkins, lideres, rrhh, alertas] = await Promise.all([
+    const [colaboradores,checkins,lideres,rrhh,alertas] = await Promise.all([
       fetchSheet(TABS.colaboradores), fetchSheet(TABS.checkins),
       fetchSheet(TABS.lideres),       fetchSheet(TABS.rrhh),
       fetchSheet(TABS.alertas),
     ]);
-    // También intentar LINKS_Prefill
-    let links = [];
-    try { links = await fetchSheet('LINKS_Prefill'); } catch(e) {}
-    DATA = { colaboradores, checkins, lideres, rrhh, alertas, links, lideresCat:[] };
-    toast('✅ Datos en tiempo real');
+    let links=[];
+    try { links=await fetchSheet('LINKS_Prefill'); } catch(e){}
+    DATA={colaboradores,checkins,lideres,rrhh,alertas,links};
+    if(USER) toast('✅ Datos actualizados');
   } catch(e) {
-    console.error('Error cargando datos:', e);
-    DATA = getDemoData();
-    toast('⚠️ Error al cargar datos del Sheet');
+    console.error('Error:',e);
+    if(USER) toast('⚠️ Error al cargar datos');
   }
-  renderAll();
 }
 
-// ══════════════════════════════════════
-//  RENDER ALL
-// ══════════════════════════════════════
-function renderAll() {
-  renderMiBienestar();
-  if (ROLE === 'lider' || ROLE === 'rrhh') renderEquipo();
-  if (ROLE === 'rrhh') renderRRHH();
-}
+function renderAll() { renderMi(); if(ROLE==='lider'||ROLE==='rrhh') renderEquipo(); if(ROLE==='rrhh') renderRRHH(); }
 
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
-const C = {
-  who5Color(v) {
-    if (v>=80) return '#18C96A';
-    if (v>=60) return '#4F6EF7';
-    if (v>=40) return '#F5A623';
-    return '#F53B57';
-  },
-  who5Label(v) {
-    if (v>=80) return ['Excelente','bg'];
-    if (v>=60) return ['Bueno','bb'];
-    if (v>=40) return ['Moderado','ba'];
-    return ['En riesgo','br'];
-  },
-  nivelColor(n) {
-    if (n==='rojo') return '#F53B57';
-    if (n==='amarillo') return '#F5A623';
-    return '#18C96A';
-  }
+const num = v => isNaN(parseFloat(v))?0:parseFloat(v);
+const avg = arr => { const a=arr.filter(v=>v!=null&&!isNaN(v)); return a.length?Math.round(a.reduce((x,y)=>+x+ +y,0)/a.length):0; };
+const fmtDate = d => { if(!d) return '—'; try{ return new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); }catch{return d;} };
+const killChart = id => { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} };
+const badge = (t,c) => `<span class="badge ${c}">${t}</span>`;
+const sem = s => s==3?'🟢':s==2?'🟡':s==1?'🔴':'—';
+
+const W = {
+  color: v => v>=80?'#22D472':v>=60?'#5B8EF0':v>=40?'#F5B731':'#F05B7A',
+  label: v => v>=80?['Excelente','bg']:v>=60?['Bueno','bb']:v>=40?['Moderado','ba']:['En riesgo','br'],
+  text:  v => v>=80?'Excelente':v>=60?'Bueno':v>=40?'Moderado':'En riesgo',
 };
 
-function num(v) { return isNaN(parseFloat(v)) ? 0 : parseFloat(v); }
-function avg(arr) { const a=arr.filter(v=>v!=null&&!isNaN(v)); return a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0; }
-function fmtDate(d) {
-  if (!d) return '—';
-  try { return new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); }
-  catch { return d; }
-}
-function lastCheckin(empId) {
-  const c = (DATA.checkins||[]).filter(c=>String(c.empleado_id)===String(empId));
-  if (!c.length) return null;
-  return c.sort((a,b)=>new Date(b.fecha_envio)-new Date(a.fecha_envio))[0];
-}
-function allCheckins(empId) {
-  return (DATA.checkins||[]).filter(c=>String(c.empleado_id)===String(empId))
-    .sort((a,b)=>new Date(a.fecha_envio)-new Date(b.fecha_envio));
-}
-function killChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
-function badge(text,cls) { return `<span class="badge ${cls}">${text}</span>`; }
-function semaforo(s) { return s==3?'🟢':s==2?'🟡':s==1?'🔴':'—'; }
+const lastCheckin = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id)===String(id)).sort((a,b)=>new Date(b.fecha_envio)-new Date(a.fecha_envio))[0]||null;
+const allCheckins = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id)===String(id)).sort((a,b)=>new Date(a.fecha_envio)-new Date(b.fecha_envio));
+
+const chartDefaults = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:'#8B95B0',font:{family:'Sora',size:11},boxWidth:10,usePointStyle:true}}},
+};
 
 // ══════════════════════════════════════
 //  RENDER: MI BIENESTAR
 // ══════════════════════════════════════
-function renderMiBienestar() {
+function renderMi() {
   const emp = (DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(EMPID));
-  if (!emp) return;
+  if(!emp) return;
 
   document.getElementById('mi-title').textContent = `Hola, ${emp.nombre} 👋`;
-  document.getElementById('mi-sub').textContent = `${emp.puesto||''} · ${emp.area||''} · ${fmtDate(new Date())}`;
+  document.getElementById('mi-sub').textContent = `${emp.puesto||''} · ${emp.area||''} · ${new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
 
   // Check-in link
-  const links = (DATA.links||[]).find(l=>String(l.empleado_id)===String(EMPID));
-  if (links?.colaborador_url) {
-    document.getElementById('mi-checkin-btn').onclick = () => window.open(links.colaborador_url,'_blank');
-  }
+  const lnk = (DATA.links||[]).find(l=>String(l.empleado_id)===String(EMPID));
+  if(lnk?.colaborador_url) document.getElementById('mi-checkin-btn').onclick=()=>window.open(lnk.colaborador_url,'_blank');
 
   const hist = allCheckins(EMPID);
-  const lc   = hist[hist.length-1];
-  const w    = lc ? num(lc.who5_pct_0_100) : 0;
-  const cl   = lc ? num(lc.indice_clima_0_100) : 0;
-  const circ = 2*Math.PI*52;
-  const [wlbl,wcls] = C.who5Label(w);
+  const lc = hist[hist.length-1];
+  const w  = lc ? num(lc.who5_pct_0_100) : 0;
+  const cl = lc ? num(lc.indice_clima_0_100) : 0;
+  const circ = 2*Math.PI*48;
+  const [wlbl,wcls] = W.label(w);
 
-  // Ring
-  document.getElementById('mi-who5-num').textContent = w ? w+'%' : '—';
-  document.getElementById('mi-who5-num').style.color = C.who5Color(w);
-  document.getElementById('mi-ring-fill').style.strokeDasharray = `${(w/100)*circ} ${circ}`;
-  document.getElementById('mi-ring-fill').style.stroke = C.who5Color(w);
+  // Ring WHO-5
+  document.getElementById('mi-who5-num').textContent = w ? w+'%':'—';
+  document.getElementById('mi-who5-num').style.color = W.color(w);
+  document.getElementById('mi-ring').style.strokeDasharray = `${(w/100)*circ} ${circ}`;
+  document.getElementById('mi-ring').style.stroke = W.color(w);
   document.getElementById('mi-who5-badge').innerHTML = w ? badge(wlbl,wcls) : '';
   document.getElementById('mi-who5-date').textContent = lc ? 'Último: '+fmtDate(lc.fecha_envio) : 'Sin check-ins aún';
 
   // Clima
-  document.getElementById('mi-clima-num').textContent = cl ? cl+'%' : '—';
-  document.getElementById('mi-clima-num').style.color = C.who5Color(cl);
-  const [clbl,ccls] = C.who5Label(cl);
+  document.getElementById('mi-clima-num').textContent = cl ? cl+'%':'—';
+  document.getElementById('mi-clima-num').style.color = W.color(cl);
+  const [clbl,ccls] = W.label(cl);
   document.getElementById('mi-clima-badge').innerHTML = cl ? badge(clbl,ccls) : '';
 
-  // Tendencia mini
+  // Trend mini
   killChart('mi-trend');
-  if (hist.length >= 2) {
+  if(hist.length>=2) {
     const last6 = hist.slice(-6);
-    const ctx = document.getElementById('mi-trend-chart').getContext('2d');
-    CHARTS['mi-trend'] = new Chart(ctx, {
+    CHARTS['mi-trend'] = new Chart(document.getElementById('mi-trend-chart').getContext('2d'),{
       type:'line',
-      data:{
-        labels: last6.map(c=>fmtDate(c.fecha_envio)),
-        datasets:[{
-          data: last6.map(c=>num(c.who5_pct_0_100)),
-          borderColor: C.who5Color(w), backgroundColor:'transparent',
-          borderWidth:2.5, pointRadius:3, tension:0.4
-        }]
-      },
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{x:{display:false},y:{display:false,min:0,max:100}}}
+      data:{labels:last6.map(c=>fmtDate(c.fecha_envio)),datasets:[{
+        data:last6.map(c=>num(c.who5_pct_0_100)),
+        borderColor:W.color(w),backgroundColor:'transparent',
+        borderWidth:2.5,pointRadius:3,tension:.4
+      }]},
+      options:{...chartDefaults,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}}}
     });
-
-    // Tendencia texto
-    const first = num(last6[0].who5_pct_0_100);
-    const last  = num(last6[last6.length-1].who5_pct_0_100);
-    const diff  = last - first;
-    document.getElementById('mi-trend-insight').innerHTML = diff > 0
-      ? `<span style="color:var(--green)">↑ +${diff} pts</span> respecto al primer registro`
-      : diff < 0 ? `<span style="color:var(--rose)">↓ ${diff} pts</span> respecto al primer registro`
-      : `<span style="color:var(--text3)">→ Sin cambio</span>`;
+    const first=num(last6[0].who5_pct_0_100), last=num(last6[last6.length-1].who5_pct_0_100), diff=last-first;
+    document.getElementById('mi-trend-text').innerHTML = diff>5
+      ? `<span style="color:var(--green)">↑ +${diff} pts</span> vs primer registro`
+      : diff<-5 ? `<span style="color:var(--rose)">↓ ${diff} pts</span> vs primer registro`
+      : `<span style="color:var(--text3)">→ Estable</span> en los últimos registros`;
   }
 
   // Dimensiones
   const dimsEl = document.getElementById('mi-dims');
-  if (lc) {
-    const dims = [
-      {l:'Energía',         v:num(lc.energia_1_5),       c:'#4F6EF7', max:5},
-      {l:'Estrés (inv.)',   v:6-num(lc.estres_1_5),      c:'#F53B57', max:5},
-      {l:'Pertenencia',     v:num(lc.pertenencia_1_5),   c:'#00C2B8', max:5},
-      {l:'Apoyo del líder', v:num(lc.apoyo_lider_1_5),   c:'#18C96A', max:5},
-      {l:'Claridad obj.',   v:num(lc.claridad_obj_1_5),  c:'#F5A623', max:5},
-      {l:'Recuperación',    v:num(lc.recuperacion_1_5),  c:'#8B5CF6', max:5},
+  if(lc) {
+    const dims=[
+      {l:'Energía',v:num(lc.energia_1_5),c:'#5B8EF0',max:5},
+      {l:'Estrés (inv.)',v:6-num(lc.estres_1_5),c:'#F05B7A',max:5},
+      {l:'Pertenencia',v:num(lc.pertenencia_1_5),c:'#00D4C8',max:5},
+      {l:'Apoyo líder',v:num(lc.apoyo_lider_1_5),c:'#22D472',max:5},
+      {l:'Claridad obj.',v:num(lc.claridad_obj_1_5),c:'#F5B731',max:5},
+      {l:'Recuperación',v:num(lc.recuperacion_1_5),c:'#A855F7',max:5},
     ];
-    dimsEl.innerHTML = dims.map(d=>`
-      <div class="dim-row">
-        <div class="dim-lbl">${d.l}</div>
-        <div class="dim-track"><div class="dim-fill" style="width:${(d.v/d.max)*100}%;background:${d.c}"></div></div>
-        <div class="dim-num" style="color:${d.c}">${d.v}</div>
-      </div>`).join('');
-  } else {
-    dimsEl.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Aún no tienes check-ins</div>';
-  }
+    dimsEl.innerHTML=dims.map(d=>`<div class="dim-row">
+      <div class="dim-lbl">${d.l}</div>
+      <div class="dim-track"><div class="dim-fill" style="width:${(d.v/d.max)*100}%;background:${d.c}"></div></div>
+      <div class="dim-num" style="color:${d.c}">${d.v}</div>
+    </div>`).join('');
+  } else dimsEl.innerHTML='<div class="empty"><span class="empty-icon">📊</span>Completa tu primer check-in</div>';
 
-  // Hist chart
+  // Historial chart
   killChart('mi-hist');
-  if (hist.length) {
-    const ctx2 = document.getElementById('mi-hist-chart').getContext('2d');
-    CHARTS['mi-hist'] = new Chart(ctx2, {
+  if(hist.length) {
+    CHARTS['mi-hist']=new Chart(document.getElementById('mi-hist-chart').getContext('2d'),{
       type:'bar',
       data:{
-        labels: hist.map(c=>fmtDate(c.fecha_envio)),
+        labels:hist.map(c=>fmtDate(c.fecha_envio)),
         datasets:[
-          {label:'WHO-5', data:hist.map(c=>num(c.who5_pct_0_100)), backgroundColor: hist.map(c=>C.who5Color(num(c.who5_pct_0_100))+'99'), borderRadius:6},
-          {label:'Clima', data:hist.map(c=>num(c.indice_clima_0_100)), backgroundColor:'rgba(0,194,184,0.25)', borderRadius:6, type:'line', borderColor:'#00C2B8', borderWidth:2, pointRadius:2}
+          {label:'WHO-5',data:hist.map(c=>num(c.who5_pct_0_100)),backgroundColor:hist.map(c=>W.color(num(c.who5_pct_0_100))+'99'),borderRadius:5,borderSkipped:false},
+          {label:'Clima',data:hist.map(c=>num(c.indice_clima_0_100)),type:'line',borderColor:'#00D4C8',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.4}
         ]
       },
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10,usePointStyle:true}}},
-        scales:{
-          y:{min:0,max:100,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9}}},
-          x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}}
-        }}
+      options:{...chartDefaults,scales:{
+        y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4A5268',font:{size:9}}},
+        x:{grid:{display:false},ticks:{color:'#4A5268',font:{size:9},maxRotation:45}}
+      }}
     });
   }
 
   // Tabla historial
-  const tbody = document.getElementById('mi-tabla');
-  document.getElementById('mi-total-badge').textContent = `${hist.length} registros`;
-  tbody.innerHTML = [...hist].reverse().map(c=>{
-    const w = num(c.who5_pct_0_100);
-    const [wl,wc] = C.who5Label(w);
+  document.getElementById('mi-total-badge').textContent=`${hist.length} registros`;
+  document.getElementById('mi-tabla').innerHTML=[...hist].reverse().map(c=>{
+    const w=num(c.who5_pct_0_100);
     return `<tr>
       <td style="color:var(--text2);font-size:12px;white-space:nowrap">${fmtDate(c.fecha_envio)}</td>
-      <td><span style="font-weight:800;color:${C.who5Color(w)}">${w}%</span></td>
+      <td><span style="font-weight:800;color:${W.color(w)}">${w}%</span></td>
       <td style="color:var(--teal);font-weight:700">${num(c.indice_clima_0_100)}%</td>
-      <td>${num(c.energia_1_5)}/5</td>
-      <td>${num(c.estres_1_5)}/5</td>
-      <td>${num(c.pertenencia_1_5)}/5</td>
+      <td>${num(c.energia_1_5)}/5</td><td>${num(c.estres_1_5)}/5</td><td>${num(c.pertenencia_1_5)}/5</td>
       <td style="color:var(--text2);font-size:12px;max-width:140px">${c.texto_motivo||'—'}</td>
       <td style="color:var(--text2);font-size:12px;max-width:140px">${c.texto_drenaje||'—'}</td>
-      <td>${c.nivel_alerta ? badge('⚠ '+c.nivel_alerta,'ba') : badge('OK','bg')}</td>
+      <td>${c.nivel_alerta?badge('⚠ '+c.nivel_alerta,'ba'):badge('OK','bg')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9" class="empty">Sin registros</td></tr>';
+  }).join('')||'<tr><td colspan="9" class="empty">Sin registros</td></tr>';
 
-  // Insights personales
-  renderInsightsMi(hist, lc);
+  // Insights
+  renderInsightsMi(hist, lc, emp);
 }
 
-function renderInsightsMi(hist, lc) {
+function renderInsightsMi(hist, lc, emp) {
   const el = document.getElementById('mi-insights');
-  const insights = [];
+  const ins = [];
 
-  if (!lc) {
-    insights.push({icon:'👋',title:'¡Bienvenido/a!',text:'Aún no tienes check-ins. Usa el botón de arriba para hacer tu primer registro.',bg:'var(--primary-l)',color:'var(--primary)'});
+  if(!lc) {
+    ins.push({icon:'👋',title:'¡Bienvenido/a al sistema!',
+      text:`Hola ${emp.nombre}, aún no tienes registros. Completa tu primer check-in para comenzar a monitorear tu bienestar emocional.`,
+      bg:'var(--blue-l)',color:'var(--blue)',action:'Hacer check-in',fn:'document.getElementById("mi-checkin-btn").click()'});
   } else {
-    const w = num(lc.who5_pct_0_100);
-    const estres = num(lc.estres_1_5);
-    const pertenencia = num(lc.pertenencia_1_5);
-    const energia = num(lc.energia_1_5);
+    const w=num(lc.who5_pct_0_100), estres=num(lc.estres_1_5), pertenencia=num(lc.pertenencia_1_5);
+    const energia=num(lc.energia_1_5), apoyo=num(lc.apoyo_lider_1_5), claridad=num(lc.claridad_obj_1_5);
 
-    if (w >= 80) insights.push({icon:'🌟',title:'¡Bienestar excelente!',text:'Tu índice WHO-5 está en niveles óptimos. Sigue así.',bg:'var(--green-l)',color:'#0F9950'});
-    else if (w < 40) insights.push({icon:'💛',title:'Área de atención',text:'Tu WHO-5 indica que podrías necesitar apoyo. No dudes en hablar con tu líder o RRHH.',bg:'var(--rose-l)',color:' #C41E37'});
+    if(w>=80) ins.push({icon:'🌟',title:'Bienestar en su mejor punto',
+      text:`Tu WHO-5 de ${w}% indica un excelente estado emocional. Tu energía, claridad y sentido de pertenencia están funcionando muy bien.`,
+      bg:'var(--green-l)',color:'var(--green)'});
+    else if(w>=60) ins.push({icon:'✅',title:'Bienestar saludable',
+      text:`Tu WHO-5 de ${w}% está en niveles saludables. Pequeñas mejoras en las dimensiones más bajas pueden llevarte a "Excelente".`,
+      bg:'var(--blue-l)',color:'var(--blue)'});
+    else if(w>=40) ins.push({icon:'⚡',title:'Área de atención moderada',
+      text:`Tu WHO-5 de ${w}% sugiere que hay aspectos de tu bienestar que merecen atención. Identifica qué dimensiones están más bajas y habla con tu líder.`,
+      bg:'var(--amber-l)',color:'var(--amber)'});
+    else ins.push({icon:'💛',title:'Es momento de pedir apoyo',
+      text:`Tu WHO-5 de ${w}% está en zona de riesgo. No estás solo/a — habla con tu líder o con RRHH. Buscar apoyo es un signo de fortaleza.`,
+      bg:'var(--rose-l)',color:'var(--rose)'});
 
-    if (estres >= 4) insights.push({icon:'😮‍💨',title:'Estrés elevado',text:'Has reportado niveles altos de estrés. Considera técnicas de manejo y habla con tu líder.',bg:'var(--amber-l)',color:'#92400E'});
+    if(estres>=4) ins.push({icon:'😮‍💨',title:'Estrés elevado detectado',
+      text:`Llevas reportando estrés nivel ${estres}/5. El estrés crónico afecta la concentración, el sueño y las relaciones. Considera hablar con tu líder sobre tu carga de trabajo.`,
+      bg:'var(--rose-l)',color:'var(--rose)'});
 
-    if (pertenencia <= 2) insights.push({icon:'🤝',title:'Conexión con el equipo',text:'Tu sentido de pertenencia es bajo. Una conversación con tu líder podría ayudar.',bg:'var(--purple-l)',color:'#6D28D9'});
+    if(pertenencia<=2) ins.push({icon:'🤝',title:'Bajo sentido de pertenencia',
+      text:`Tu sentido de conexión con el equipo está en ${pertenencia}/5. Esto puede afectar tu motivación. Una conversación con tu líder o compañeros podría fortalecer este vínculo.`,
+      bg:'var(--purple-l)',color:'var(--purple)'});
 
-    if (energia >= 4 && estres <= 2) insights.push({icon:'⚡',title:'Energía en su punto',text:'Tienes mucha energía y poco estrés. ¡Momento ideal para proyectos importantes!',bg:'var(--teal-l)',color:'#0F766E'});
+    if(claridad<=2) ins.push({icon:'🎯',title:'Claridad de objetivos baja',
+      text:`Tienes claridad ${claridad}/5 sobre tus objetivos. Sin claridad es difícil dar lo mejor. Agenda una conversación con tu líder para alinear expectativas.`,
+      bg:'var(--amber-l)',color:'var(--amber)'});
 
-    if (hist.length >= 3) {
-      const recientes = hist.slice(-3).map(c=>num(c.who5_pct_0_100));
-      const trend = recientes[2]-recientes[0];
-      if (trend > 15) insights.push({icon:'📈',title:'Tendencia positiva',text:`Tu bienestar subió ${trend} puntos en los últimos 3 registros. ¡Excelente progreso!`,bg:'var(--green-l)',color:'#0F9950'});
-      else if (trend < -15) insights.push({icon:'📉',title:'Tendencia a la baja',text:`Tu bienestar bajó ${Math.abs(trend)} puntos. Es buen momento para una conversación de apoyo.`,bg:'var(--rose-l)',color:'#C41E37'});
+    if(apoyo<=2) ins.push({icon:'🙏',title:'Apoyo del líder bajo',
+      text:`Sientes poco apoyo de tu líder (${apoyo}/5). Esta es una señal importante. Considera agendar un 1:1 para compartir cómo te sientes.`,
+      bg:'var(--amber-l)',color:'var(--amber)'});
+
+    if(energia>=4&&estres<=2) ins.push({icon:'⚡',title:'Momento ideal para proyectos importantes',
+      text:`Tienes alta energía (${energia}/5) y bajo estrés (${estres}/5). Este es tu pico de rendimiento — aprovecha para abordar proyectos que requieren concentración y creatividad.`,
+      bg:'var(--teal-l)',color:'var(--teal)'});
+
+    if(hist.length>=3) {
+      const rec=hist.slice(-3).map(c=>num(c.who5_pct_0_100));
+      const trend=rec[2]-rec[0];
+      if(trend>15) ins.push({icon:'📈',title:`Mejora sostenida: +${trend} pts en 3 registros`,
+        text:'Tu bienestar lleva una tendencia positiva consistente. Lo que estás haciendo está funcionando — ¿qué ha cambiado positivamente en tu vida o trabajo?',
+        bg:'var(--green-l)',color:'var(--green)'});
+      else if(trend<-15) ins.push({icon:'📉',title:`Tendencia a la baja: ${trend} pts en 3 registros`,
+        text:'Tu bienestar ha disminuido en los últimos registros. Es momento de reflexionar qué está pasando y buscar apoyo antes de que avance.',
+        bg:'var(--rose-l)',color:'var(--rose)'});
+    }
+
+    if(hist.length>=5) {
+      const avgEstres=avg(hist.slice(-5).map(c=>num(c.estres_1_5)));
+      if(avgEstres>=4) ins.push({icon:'🔴',title:'Alerta: Estrés crónico',
+        text:`En tus últimos 5 registros tienes un estrés promedio de ${avgEstres}/5. El estrés crónico es un factor de riesgo serio. Te recomendamos hablar con RRHH.`,
+        bg:'var(--rose-l)',color:'var(--rose)'});
     }
   }
 
-  if (!insights.length) {
-    insights.push({icon:'✅',title:'Todo en orden',text:'Tus indicadores están en niveles saludables. Sigue con tus check-ins periódicos.',bg:'var(--green-l)',color:'#0F9950'});
-  }
+  if(!ins.length) ins.push({icon:'✅',title:'Todo en orden',text:'Tus indicadores están en niveles saludables. Sigue con tus check-ins regulares para mantener el monitoreo.',bg:'var(--green-l)',color:'var(--green)'});
 
-  el.innerHTML = insights.map(i=>`
-    <div class="insight" style="background:${i.bg}">
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">`+
+    ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
       <div class="insight-icon">${i.icon}</div>
       <div>
         <div class="insight-title" style="color:${i.color}">${i.title}</div>
         <div class="insight-text">${i.text}</div>
+        ${i.action?`<button class="insight-action" onclick="${i.fn}">${i.action} →</button>`:''}
       </div>
-    </div>`).join('');
+    </div>`).join('')+`</div>`;
 }
 
 // ══════════════════════════════════════
 //  RENDER: EQUIPO (líder)
 // ══════════════════════════════════════
 function renderEquipo() {
-  const activos = (DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
-  const myTeam  = ROLE==='rrhh' ? activos : activos.filter(c=>String(c.jefe_id)===String(EMPID));
-  const allW    = myTeam.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
-  const allCl   = myTeam.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
-  const [wlbl,wcls] = C.who5Label(avg(allW));
+  const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
+  const team=ROLE==='rrhh'?activos:activos.filter(c=>String(c.jefe_id)===String(EMPID));
+  const allW=team.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
+  const allCl=team.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
+  const avgW=avg(allW), avgCl=avg(allCl);
+  const [wlbl,wcls]=W.label(avgW);
 
-  document.getElementById('eq-who5').textContent = avg(allW)+'%';
-  document.getElementById('eq-who5-badge').textContent = wlbl;
-  document.getElementById('eq-who5-badge').className = 'kpi-trend trend-'+((avg(allW)>=60)?'up':'dn');
-  document.getElementById('eq-clima').textContent = avg(allCl)+'%';
-  document.getElementById('eq-alertas').textContent = (DATA.alertas||[]).filter(a=>myTeam.find(c=>String(c.empleado_id)===String(a.empleado_id))).length;
+  document.getElementById('eq-who5').textContent=avgW+'%';
+  document.getElementById('eq-who5-badge').textContent=wlbl;
+  document.getElementById('eq-who5-badge').className='kpi-trend '+(avgW>=60?'t-up':'t-dn');
+  document.getElementById('eq-clima').textContent=avgCl+'%';
+  document.getElementById('eq-alertas').textContent=(DATA.alertas||[]).filter(a=>team.find(c=>String(c.empleado_id)===String(a.empleado_id))).length;
 
-  // Barras WHO-5
-  document.getElementById('eq-bars').innerHTML = myTeam.map(emp=>{
-    const lc = lastCheckin(emp.empleado_id);
-    const w  = lc ? num(lc.who5_pct_0_100) : 0;
+  // Barras
+  document.getElementById('eq-bars').innerHTML=team.map(emp=>{
+    const lc=lastCheckin(emp.empleado_id), w=lc?num(lc.who5_pct_0_100):0;
     return `<div class="dim-row">
-      <div class="dim-lbl">${emp.nombre}</div>
-      <div class="dim-track"><div class="dim-fill" style="width:${w}%;background:${C.who5Color(w)}"></div></div>
-      <div class="dim-num" style="color:${C.who5Color(w)}">${w}%</div>
+      <div class="dim-lbl" style="width:100px">${emp.nombre}</div>
+      <div class="dim-track"><div class="dim-fill" style="width:${w}%;background:${W.color(w)}"></div></div>
+      <div class="dim-num" style="color:${W.color(w)}">${w}%</div>
     </div>`;
-  }).join('') || '<div class="empty">Sin equipo asignado</div>';
+  }).join('')||'<div class="empty">Sin equipo asignado</div>';
 
   // Radar
-  const dimKeys = ['energia_1_5','estres_inv','pertenencia_1_5','apoyo_lider_1_5','claridad_obj_1_5','recuperacion_1_5'];
-  const dimLbls = ['Energía','Estrés inv.','Pertenencia','Apoyo','Claridad','Recuperación'];
-  const allTeamCheckins = (DATA.checkins||[]).filter(c=>myTeam.find(t=>String(t.empleado_id)===String(c.empleado_id)));
-  const radarVals = dimKeys.map((d,i)=>{
-    const vals = allTeamCheckins.map(c=>d==='estres_inv'?6-num(c.estres_1_5):num(c[d])).filter(v=>v>0);
-    return vals.length ? +(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : 0;
+  const teamCheckins=(DATA.checkins||[]).filter(c=>team.find(t=>String(t.empleado_id)===String(c.empleado_id)));
+  const rLabels=['Energía','Estrés inv.','Pertenencia','Apoyo','Claridad','Recuperación'];
+  const rKeys=['energia_1_5','estres_inv','pertenencia_1_5','apoyo_lider_1_5','claridad_obj_1_5','recuperacion_1_5'];
+  const rVals=rKeys.map(d=>{
+    const vals=teamCheckins.map(c=>d==='estres_inv'?6-num(c.estres_1_5):num(c[d])).filter(v=>v>0);
+    return vals.length?+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
   });
-
   killChart('eq-radar');
-  CHARTS['eq-radar'] = new Chart(document.getElementById('eq-radar').getContext('2d'),{
+  CHARTS['eq-radar']=new Chart(document.getElementById('eq-radar').getContext('2d'),{
     type:'radar',
-    data:{labels:dimLbls,datasets:[{
-      label:'Equipo', data:radarVals,
-      backgroundColor:'rgba(79,110,247,0.12)', borderColor:'#4F6EF7',
-      borderWidth:2, pointBackgroundColor:'#4F6EF7', pointRadius:4
-    }]},
+    data:{labels:rLabels,datasets:[{label:'Equipo',data:rVals,backgroundColor:'rgba(91,142,240,0.1)',borderColor:'#5B8EF0',borderWidth:2,pointBackgroundColor:'#5B8EF0',pointRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,
-      scales:{r:{min:0,max:5,ticks:{stepSize:1,font:{size:9}},grid:{color:'rgba(0,0,0,0.06)'},pointLabels:{font:{size:11}}}},
+      scales:{r:{min:0,max:5,ticks:{stepSize:1,color:'#4A5268',font:{size:9},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'#8B95B0',font:{size:11}}}},
       plugins:{legend:{display:false}}}
   });
 
   // Tabla equipo
-  const tbody = document.getElementById('eq-tabla');
-  tbody.innerHTML = myTeam.map(emp=>{
-    const lc = lastCheckin(emp.empleado_id);
-    const hist = allCheckins(emp.empleado_id);
-    const w  = lc ? num(lc.who5_pct_0_100) : null;
-    const cl = lc ? num(lc.indice_clima_0_100) : null;
-    const [wl,wc] = w!=null ? C.who5Label(w) : ['Sin datos',''];
-    const openAlerts = (DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
-    // Tendencia
-    let trend = '→';
-    if (hist.length>=2) {
-      const d = num(hist[hist.length-1].who5_pct_0_100) - num(hist[hist.length-2].who5_pct_0_100);
-      trend = d>5?'<span style="color:var(--green)">↑ +'+d+'</span>':d<-5?'<span style="color:var(--rose)">↓ '+d+'</span>':'<span style="color:var(--text3)">→</span>';
-    }
+  document.getElementById('eq-tabla').innerHTML=team.map(emp=>{
+    const lc=lastCheckin(emp.empleado_id);
+    const hist=allCheckins(emp.empleado_id);
+    const w=lc?num(lc.who5_pct_0_100):null, cl=lc?num(lc.indice_clima_0_100):null;
+    const [wl,wc]=w!=null?W.label(w):['Sin datos',''];
+    const openAl=(DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
+    let trend='→';
+    if(hist.length>=2){const d=num(hist[hist.length-1].who5_pct_0_100)-num(hist[hist.length-2].who5_pct_0_100);trend=d>5?`<span style="color:var(--green)">↑ +${d}</span>`:d<-5?`<span style="color:var(--rose)">↓ ${d}</span>`:`<span style="color:var(--text3)">→</span>`;}
     return `<tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="av" style="background:${w?C.who5Color(w)+'22':'var(--surface2)'};color:${w?C.who5Color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
-          <div>
-            <div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div>
-            <div style="color:var(--text3);font-size:11px">${emp.puesto||''}</div>
-          </div>
-        </div>
-      </td>
-      <td>${w!=null?`<span style="font-weight:800;color:${C.who5Color(w)}">${w}%</span> ${badge(wl,wc)}`:'<span style="color:var(--text3)">Sin datos</span>'}</td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="av" style="background:${w?W.color(w)+'22':'var(--surface2)'};color:${w?W.color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
+        <div><div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div><div style="color:var(--text3);font-size:11px">${emp.puesto||''}</div></div>
+      </div></td>
+      <td>${w!=null?`<span style="font-weight:800;color:${W.color(w)}">${w}%</span> ${badge(wl,wc)}`:'<span style="color:var(--text3)">Sin datos</span>'}</td>
       <td style="color:var(--teal);font-weight:700">${cl!=null?cl+'%':'—'}</td>
       <td style="color:var(--text2);font-size:12px">${fmtDate(lc?.fecha_envio)}</td>
       <td>${trend}</td>
-      <td>${openAlerts>0?badge('⚠ '+openAlerts+' alerta'+(openAlerts>1?'s':''),'br'):badge('✓ OK','bg')}</td>
+      <td>${openAl>0?badge('⚠ '+openAl+' alerta'+(openAl>1?'s':''),'br'):badge('✓ OK','bg')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" class="empty">Sin colaboradores asignados</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="empty">Sin colaboradores asignados</td></tr>';
 
   // Evaluaciones
-  const myEvals = (DATA.lideres||[]).filter(e=>String(e.jefe_id)===String(EMPID)||ROLE==='rrhh');
-  const evalsTbody = document.getElementById('eq-evals');
-  evalsTbody.innerHTML = myEvals.map(ev=>{
-    const emp = (DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(ev.empleado_id));
+  const myEvals=(DATA.lideres||[]).filter(e=>String(e.jefe_id)===String(EMPID)||ROLE==='rrhh');
+  document.getElementById('eq-evals').innerHTML=myEvals.map(ev=>{
+    const emp=(DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(ev.empleado_id));
     return `<tr>
       <td style="font-weight:700">${emp?.nombre||'ID '+ev.empleado_id} ${emp?.apellido_paterno||''}</td>
       <td><span style="font-weight:800;color:${num(ev.cumpl_objetivo_pct)>=80?'var(--green)':'var(--amber)'}">${ev.cumpl_objetivo_pct||'—'}%</span></td>
-      <td style="font-size:18px">${semaforo(num(ev.semaforo_objetivo))}</td>
-      <td>${ev.colaboracion_1_5||'—'}/5</td>
-      <td>${ev.disposicion_1_5||'—'}/5</td>
+      <td style="font-size:18px">${sem(num(ev.semaforo_objetivo))}</td>
       <td style="color:var(--text2);font-size:12px;max-width:200px">${ev.comentarios_lider||'—'}</td>
       <td style="color:var(--text3);font-size:12px">${fmtDate(ev.fecha_respuesta)}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="empty">Sin evaluaciones aún</td></tr>';
+  }).join('')||'<tr><td colspan="5" class="empty">Sin evaluaciones</td></tr>';
+
+  renderInsightsEquipo(team, avgW, teamCheckins);
+}
+
+function renderInsightsEquipo(team, avgW, checkins) {
+  const el = document.getElementById('eq-insights');
+  const ins = [];
+
+  if(!team.length) {
+    ins.push({icon:'👥',title:'Sin equipo asignado',text:'No tienes colaboradores asignados en el sistema. Contacta a RRHH para configurar tu equipo.',bg:'var(--surface2)',color:'var(--text2)'});
+  } else {
+    // Mejor y peor WHO-5
+    const withData=team.map(c=>({...c,w:lastCheckin(c.empleado_id)?num(lastCheckin(c.empleado_id).who5_pct_0_100):null})).filter(c=>c.w!=null);
+    if(withData.length>=2) {
+      const best=withData.reduce((a,b)=>a.w>b.w?a:b);
+      const worst=withData.reduce((a,b)=>a.w<b.w?a:b);
+      ins.push({icon:'🏆',title:`${best.nombre} lidera el bienestar del equipo`,
+        text:`Con un WHO-5 de ${best.w}%, ${best.nombre} es el referente de bienestar. Comparte sus prácticas con el equipo.`,
+        bg:'var(--green-l)',color:'var(--green)'});
+      if(worst.w<50) ins.push({icon:'🚨',title:`${worst.nombre} requiere atención urgente`,
+        text:`WHO-5 de ${worst.w}% está en zona de riesgo. Se recomienda una conversación 1:1 esta semana y posible apoyo de RRHH.`,
+        bg:'var(--rose-l)',color:'var(--rose)'});
+      else if(worst.w<65) ins.push({icon:'💛',title:`${worst.nombre} podría necesitar apoyo`,
+        text:`Con un WHO-5 de ${worst.w}%, ${worst.nombre} está en zona de atención. Un check-in personal esta semana podría marcar la diferencia.`,
+        bg:'var(--amber-l)',color:'var(--amber)'});
+    }
+
+    if(avgW>=70) ins.push({icon:'🌟',title:'Equipo en excelente estado',
+      text:`El promedio WHO-5 de tu equipo es ${avgW}%. Este es un indicador de un ambiente de trabajo saludable. ¡Sigue fomentando este clima!`,
+      bg:'var(--green-l)',color:'var(--green)'});
+    else if(avgW<50) ins.push({icon:'⚠️',title:'El equipo necesita tu liderazgo',
+      text:`El WHO-5 promedio de ${avgW}% está por debajo del umbral saludable. Considera acciones colectivas: reconocimiento, claridad de metas, espacios de escucha.`,
+      bg:'var(--rose-l)',color:'var(--rose)'});
+
+    // Sin check-ins
+    const sinDatos=team.filter(c=>!lastCheckin(c.empleado_id));
+    if(sinDatos.length>0) ins.push({icon:'📋',title:`${sinDatos.length} persona${sinDatos.length>1?'s':''} sin check-in`,
+      text:`${sinDatos.map(c=>c.nombre).join(', ')} aún no tienen registros. Motívalos a completar su primer check-in.`,
+      bg:'var(--purple-l)',color:'var(--purple)'});
+
+    // Estrés colectivo
+    if(checkins.length) {
+      const avgEstres=avg(checkins.map(c=>num(c.estres_1_5)));
+      if(avgEstres>=4) ins.push({icon:'😮‍💨',title:'Estrés colectivo elevado',
+        text:`El estrés promedio del equipo es ${avgEstres.toFixed(1)}/5. Esto puede indicar sobrecarga de trabajo. Revisa la distribución de tareas y considera hablar con RRHH.`,
+        bg:'var(--rose-l)',color:'var(--rose)'});
+      const avgPert=avg(checkins.map(c=>num(c.pertenencia_1_5)));
+      if(avgPert<=2.5) ins.push({icon:'🤝',title:'Bajo sentido de pertenencia',
+        text:`La pertenencia promedio es ${avgPert.toFixed(1)}/5. El equipo podría beneficiarse de actividades de integración y reconocimiento público.`,
+        bg:'var(--amber-l)',color:'var(--amber)'});
+    }
+  }
+
+  el.innerHTML=ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
+    <div class="insight-icon">${i.icon}</div>
+    <div><div class="insight-title" style="color:${i.color}">${i.title}</div><div class="insight-text">${i.text}</div></div>
+  </div>`).join('');
 }
 
 // ══════════════════════════════════════
 //  RENDER: RRHH
 // ══════════════════════════════════════
 function renderRRHH() {
-  const activos = (DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
-  const allW    = activos.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
-  const allCl   = activos.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
-  const alertasAbiertas = (DATA.alertas||[]).filter(a=>a.estado==='abierta').length;
-  const [wlbl] = C.who5Label(avg(allW));
+  const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
+  const allW=activos.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
+  const allCl=activos.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
+  const avgW=avg(allW), avgCl=avg(allCl);
+  const alertasAbiertas=(DATA.alertas||[]).filter(a=>a.estado==='abierta').length;
+  const conDatos=activos.filter(c=>lastCheckin(c.empleado_id)).length;
+  const participacion=activos.length?Math.round((conDatos/activos.length)*100):0;
 
-  document.getElementById('rk-who5').textContent = avg(allW)+'%';
-  document.getElementById('rk-who5-label').textContent = wlbl;
-  document.getElementById('rk-who5-badge').textContent = avg(allW)>=60?'↑ Bueno':'↓ Atención';
-  document.getElementById('rk-who5-badge').className = 'kpi-trend '+(avg(allW)>=60?'trend-up':'trend-dn');
-  document.getElementById('rk-clima').textContent = avg(allCl)+'%';
-  document.getElementById('rk-activos').textContent = activos.length;
-  document.getElementById('rk-alertas').textContent = alertasAbiertas;
-  document.getElementById('rrhh-date').textContent = 'Actualizado: '+fmtDate(new Date());
+  document.getElementById('rk-who5').textContent=avgW+'%';
+  document.getElementById('rk-who5-label').textContent=W.text(avgW);
+  document.getElementById('rk-who5-trend').textContent=avgW>=60?'↑ Saludable':'↓ Atención';
+  document.getElementById('rk-who5-trend').className='kpi-trend '+(avgW>=60?'t-up':'t-dn');
+  document.getElementById('rk-clima').textContent=avgCl+'%';
+  document.getElementById('rk-activos').textContent=activos.length;
+  document.getElementById('rk-participacion').textContent=`${participacion}% con check-in`;
+  document.getElementById('rk-alertas').textContent=alertasAbiertas;
+  document.getElementById('rrhh-date').textContent='Actualizado: '+new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
 
   // Trend
-  const trend = buildOrgTrend();
+  const trend=buildTrend();
   killChart('rrhh-trend');
-  CHARTS['rrhh-trend'] = new Chart(document.getElementById('rrhh-trend').getContext('2d'),{
+  CHARTS['rrhh-trend']=new Chart(document.getElementById('rrhh-trend').getContext('2d'),{
     type:'line',
     data:{labels:trend.labels,datasets:[
-      {label:'WHO-5',data:trend.who5,borderColor:'#4F6EF7',backgroundColor:'rgba(79,110,247,0.07)',borderWidth:2.5,pointRadius:4,fill:true,tension:0.4},
-      {label:'Clima',data:trend.clima,borderColor:'#00C2B8',backgroundColor:'rgba(0,194,184,0.07)',borderWidth:2.5,pointRadius:4,fill:true,tension:0.4}
+      {label:'WHO-5',data:trend.who5,borderColor:'#5B8EF0',backgroundColor:'rgba(91,142,240,0.08)',borderWidth:2.5,pointRadius:4,fill:true,tension:.4},
+      {label:'Clima',data:trend.clima,borderColor:'#00D4C8',backgroundColor:'rgba(0,212,200,0.06)',borderWidth:2.5,pointRadius:4,fill:true,tension:.4}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:10,usePointStyle:true}}},
-      scales:{y:{min:0,max:100,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+    options:{...chartDefaults,scales:{
+      y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4A5268',font:{size:10}}},
+      x:{grid:{display:false},ticks:{color:'#4A5268',font:{size:10}}}
+    }}
   });
 
-  // Donut alertas
-  const cerradas = (DATA.alertas||[]).filter(a=>a.estado==='cerrada').length;
+  // Donut
+  const cerradas=(DATA.alertas||[]).filter(a=>a.estado==='cerrada').length;
   killChart('rrhh-donut');
-  CHARTS['rrhh-donut'] = new Chart(document.getElementById('rrhh-donut').getContext('2d'),{
+  CHARTS['rrhh-donut']=new Chart(document.getElementById('rrhh-donut').getContext('2d'),{
     type:'doughnut',
-    data:{labels:['Abiertas','Cerradas'],datasets:[{data:[alertasAbiertas||0,cerradas||0],backgroundColor:['#F5A623','#18C96A'],borderWidth:0,hoverOffset:4}]},
+    data:{labels:['Abiertas','Cerradas'],datasets:[{data:[alertasAbiertas||0,cerradas||0],backgroundColor:['#F5B731','#22D472'],borderWidth:0,hoverOffset:4}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}
   });
-  document.getElementById('rrhh-donut-legend').innerHTML=`<div style="display:flex;gap:16px;justify-content:center;font-size:12px"><span><span style="color:#F5A623;font-weight:800">●</span> Abiertas: ${alertasAbiertas}</span><span><span style="color:#18C96A;font-weight:800">●</span> Cerradas: ${cerradas}</span></div>`;
+  document.getElementById('rrhh-donut-legend').innerHTML=`<div style="display:flex;gap:16px;justify-content:center;font-size:12px;color:var(--text2)">
+    <span><span style="color:var(--amber);font-weight:800">●</span> Abiertas: ${alertasAbiertas}</span>
+    <span><span style="color:var(--green);font-weight:800">●</span> Cerradas: ${cerradas}</span>
+  </div>`;
 
   // Tabla colaboradores
   renderTablaRRHH(activos);
 
   // Feed alertas
-  const feedAl = document.getElementById('rrhh-alertas-feed');
-  const recAl  = [...(DATA.alertas||[])].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,6);
-  feedAl.innerHTML = recAl.map(a=>{
-    const emp = (DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(a.empleado_id));
-    return `<div class="alert-feed-item">
-      <div class="alert-dot" style="background:${C.nivelColor(a.nivel)}"></div>
+  const feedAl=document.getElementById('rrhh-alertas-feed');
+  const recAl=[...(DATA.alertas||[])].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,6);
+  feedAl.innerHTML=recAl.map(a=>{
+    const emp=(DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(a.empleado_id));
+    const dot=a.nivel==='rojo'?'var(--rose)':a.nivel==='amarillo'?'var(--amber)':'var(--green)';
+    return `<div class="af-item">
+      <div class="af-dot" style="background:${dot}"></div>
       <div style="flex:1">
         <div style="font-weight:700;font-size:13px">${emp?.nombre||'ID '+a.empleado_id} ${emp?.apellido_paterno||''}</div>
         <div style="color:var(--text2);font-size:12px">${a.regla_disparada}</div>
@@ -1288,149 +1205,145 @@ function renderRRHH() {
       </div>
       ${badge(a.estado,a.estado==='cerrada'?'bg':'ba')}
     </div>`;
-  }).join('') || '<div class="empty"><div class="empty-icon">✅</div>Sin alertas</div>';
+  }).join('')||'<div class="empty"><span class="empty-icon">✅</span>Sin alertas</div>';
 
   // Feed RRHH
-  const feedRH = document.getElementById('rrhh-psico-feed');
-  feedRH.innerHTML = (DATA.rrhh||[]).length ? (DATA.rrhh||[]).slice(0,6).map(r=>{
-    const emp = (DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(r.empleado_id));
-    return `<div class="alert-feed-item">
-      <div class="alert-dot" style="background:var(--primary)"></div>
+  const feedRH=document.getElementById('rrhh-psico-feed');
+  feedRH.innerHTML=(DATA.rrhh||[]).length?(DATA.rrhh||[]).slice(0,6).map(r=>{
+    const emp=(DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(r.empleado_id));
+    return `<div class="af-item">
+      <div class="af-dot" style="background:var(--blue)"></div>
       <div>
         <div style="font-weight:700;font-size:13px">${emp?.nombre||'ID '+r.empleado_id}</div>
-        <div style="color:var(--text2);font-size:12px">${r.tipo_psicometrico||'—'} · ${r.puntaje||'—'} pts · Perc. ${r.percentil||'—'}</div>
+        <div style="color:var(--text2);font-size:12px">${r.tipo_psicometrico||'—'} · ${r.puntaje||'—'} pts</div>
         <div style="color:var(--text3);font-size:11px">${fmtDate(r.fecha_registro)}</div>
       </div>
     </div>`;
-  }).join('') : '<div class="empty"><div class="empty-icon">📋</div>Sin registros psicométricos</div>';
+  }).join(''):'<div class="empty"><span class="empty-icon">📋</span>Sin registros psicométricos</div>';
 
-  // Insights org
-  renderInsightsRRHH(activos, avg(allW), alertasAbiertas);
+  renderInsightsRRHH(activos, avgW, avgCl, alertasAbiertas, participacion, conDatos);
 }
 
 function renderTablaRRHH(activos) {
-  const tbody = document.getElementById('rrhh-tabla');
-  tbody.innerHTML = activos.map(emp=>{
-    const lc  = lastCheckin(emp.empleado_id);
-    const hist = allCheckins(emp.empleado_id);
-    const w   = lc ? num(lc.who5_pct_0_100) : null;
-    const cl  = lc ? num(lc.indice_clima_0_100) : null;
-    const [wl,wc] = w!=null ? C.who5Label(w) : ['Sin datos',''];
-    const openAl = (DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
-    const rolLabel = emp.rol || 'colaborador';
-    const rolCls   = rolLabel==='rrhh'?'ba':rolLabel==='lider'?'bt':'bg';
+  document.getElementById('rrhh-tabla').innerHTML=activos.map(emp=>{
+    const lc=lastCheckin(emp.empleado_id);
+    const hist=allCheckins(emp.empleado_id);
+    const w=lc?num(lc.who5_pct_0_100):null, cl=lc?num(lc.indice_clima_0_100):null;
+    const [wl,wc]=w!=null?W.label(w):['Sin datos',''];
+    const openAl=(DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
+    const rolCls=emp.rol==='rrhh'?'ba':emp.rol==='lider'?'bt':'bg';
     return `<tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="av" style="background:${w?C.who5Color(w)+'22':'var(--surface2)'};color:${w?C.who5Color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
-          <div>
-            <div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div>
-            <div style="color:var(--text3);font-size:11px">${emp.email||''}</div>
-          </div>
-        </div>
-      </td>
-      <td>${badge(rolLabel,rolCls)}</td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="av" style="background:${w?W.color(w)+'22':'var(--surface2)'};color:${w?W.color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
+        <div><div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div><div style="color:var(--text3);font-size:11px">${emp.email||''}</div></div>
+      </div></td>
+      <td>${badge(emp.rol||'colaborador',rolCls)}</td>
       <td style="color:var(--text2);font-size:12px">${emp.area||'—'}</td>
-      <td>${w!=null?`<span style="font-weight:800;color:${C.who5Color(w)}">${w}%</span> ${badge(wl,wc)}`:'<span style="color:var(--text3)">Sin datos</span>'}</td>
+      <td>${w!=null?`<span style="font-weight:800;color:${W.color(w)}">${w}%</span> ${badge(wl,wc)}`:'<span style="color:var(--text3)">Sin datos</span>'}</td>
       <td style="color:var(--teal);font-weight:700">${cl!=null?cl+'%':'—'}</td>
       <td style="color:var(--text2)">${hist.length}</td>
       <td style="color:var(--text2);font-size:12px">${fmtDate(lc?.fecha_envio)}</td>
       <td>${openAl>0?badge('⚠ '+openAl,'br'):badge('✓ OK','bg')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="empty">Sin colaboradores</td></tr>';
+  }).join('')||'<tr><td colspan="8" class="empty">Sin colaboradores</td></tr>';
 }
 
-function filtrarTablaRRHH(q) {
-  const activos = (DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
-  const filtrados = activos.filter(c=>{
-    const search = (c.nombre+' '+(c.apellido_paterno||'')+' '+(c.email||'')+' '+(c.area||'')).toLowerCase();
-    return search.includes(q.toLowerCase());
-  });
-  renderTablaRRHH(filtrados);
+function filtrarRRHH(q) {
+  const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
+  renderTablaRRHH(activos.filter(c=>`${c.nombre} ${c.apellido_paterno||''} ${c.email||''} ${c.area||''}`.toLowerCase().includes(q.toLowerCase())));
 }
 
-function renderInsightsRRHH(activos, avgWho5, alertasAbiertas) {
-  const el = document.getElementById('rrhh-insights');
-  const insights = [];
+function renderInsightsRRHH(activos, avgW, avgCl, alertasAbiertas, participacion, conDatos) {
+  const el=document.getElementById('rrhh-insights');
+  const ins=[];
+  const checkins=DATA.checkins||[];
+  const alertas=DATA.alertas||[];
 
-  if (avgWho5 >= 70) insights.push({icon:'🌟',title:'Organización en buen estado',text:`El WHO-5 promedio es ${avgWho5}%. La mayoría de los colaboradores reportan bienestar positivo.`,bg:'var(--green-l)',color:'#0F9950'});
-  else if (avgWho5 < 50) insights.push({icon:'⚠️',title:'Atención requerida',text:`El WHO-5 promedio es ${avgWho5}%, por debajo del umbral saludable de 60%. Considera una intervención.`,bg:'var(--rose-l)',color:'#C41E37'});
+  // Estado general
+  if(avgW>=75) ins.push({icon:'🌟',title:'Organización en estado óptimo',
+    text:`El WHO-5 promedio de ${avgW}% supera el umbral de excelencia. La mayoría de los colaboradores reportan bienestar positivo. El ambiente de trabajo está generando resultados.`,
+    bg:'var(--green-l)',color:'var(--green)'});
+  else if(avgW>=60) ins.push({icon:'✅',title:'Organización en estado saludable',
+    text:`WHO-5 promedio de ${avgW}%. El bienestar organizacional está en buen nivel. Hay oportunidades de mejora específicas en algunos colaboradores.`,
+    bg:'var(--blue-l)',color:'var(--blue)'});
+  else if(avgW>=40) ins.push({icon:'⚡',title:'Atención requerida a nivel organizacional',
+    text:`WHO-5 promedio de ${avgW}%. Por debajo del umbral saludable de 60%. Se recomienda una intervención estratégica: revisar cargas de trabajo, comunicación y reconocimiento.`,
+    bg:'var(--amber-l)',color:'var(--amber)'});
+  else ins.push({icon:'🚨',title:'Situación crítica — Intervención urgente',
+    text:`WHO-5 promedio de ${avgW}%. La organización está en zona de riesgo. Es necesario implementar medidas inmediatas: reuniones de diagnóstico, revisión de condiciones y apoyo psicológico.`,
+    bg:'var(--rose-l)',color:'var(--rose)'});
 
-  if (alertasAbiertas > 0) insights.push({icon:'🔔',title:`${alertasAbiertas} alerta${alertasAbiertas>1?'s':''} abierta${alertasAbiertas>1?'s':''}`,text:'Hay alertas que requieren seguimiento. Revisa la sección de alertas y toma acción.',bg:'var(--amber-l)',color:'#92400E'});
+  // Participación
+  if(participacion<50) ins.push({icon:'📊',title:`Solo ${participacion}% de participación`,
+    text:`${activos.length-conDatos} colaboradores no tienen registros. Sin datos no hay diagnóstico. Implementa recordatorios automáticos y comunica la importancia del sistema.`,
+    bg:'var(--purple-l)',color:'var(--purple)'});
+  else if(participacion>=80) ins.push({icon:'📈',title:`${participacion}% de participación — ¡Excelente!`,
+    text:`La adopción del sistema es alta. Esto garantiza datos confiables para tomar decisiones estratégicas sobre el bienestar organizacional.`,
+    bg:'var(--green-l)',color:'var(--green)'});
 
-  const sinCheckin = activos.filter(c=>!lastCheckin(c.empleado_id)).length;
-  if (sinCheckin > 0) insights.push({icon:'📋',title:`${sinCheckin} colaborador${sinCheckin>1?'es':''} sin check-in`,text:'Algunos colaboradores aún no tienen registros. Envía un recordatorio.',bg:'var(--purple-l)',color:'#6D28D9'});
+  // Alertas
+  if(alertasAbiertas>0) ins.push({icon:'🔔',title:`${alertasAbiertas} alerta${alertasAbiertas>1?'s':''} abierta${alertasAbiertas>1?'s':''}`,
+    text:`Hay alertas que requieren seguimiento activo. Las alertas sin resolver pueden escalar a situaciones de mayor riesgo. Asigna responsables y da seguimiento esta semana.`,
+    bg:'var(--amber-l)',color:'var(--amber)'});
 
-  const participacion = activos.length ? Math.round(((activos.length-sinCheckin)/activos.length)*100) : 0;
-  insights.push({icon:'📊',title:`${participacion}% de participación`,text:`${activos.length-sinCheckin} de ${activos.length} colaboradores tienen al menos un check-in registrado.`,bg:'var(--teal-l)',color:'#0F766E'});
+  // Análisis de tendencia
+  if(checkins.length>=5) {
+    const sorted=[...checkins].sort((a,b)=>new Date(a.fecha_envio)-new Date(b.fecha_envio));
+    const first=sorted.slice(0,3).map(c=>num(c.who5_pct_0_100));
+    const last=sorted.slice(-3).map(c=>num(c.who5_pct_0_100));
+    const trend=avg(last)-avg(first);
+    if(trend>10) ins.push({icon:'📈',title:`Tendencia organizacional positiva: +${Math.round(trend)} pts`,
+      text:'El bienestar promedio ha mejorado desde el inicio del programa. Las iniciativas implementadas están teniendo efecto positivo.',
+      bg:'var(--green-l)',color:'var(--green)'});
+    else if(trend<-10) ins.push({icon:'📉',title:`Tendencia organizacional negativa: ${Math.round(trend)} pts`,
+      text:'El bienestar promedio ha disminuido. Es necesario identificar las causas: cambios en la organización, carga de trabajo, clima de equipo.',
+      bg:'var(--rose-l)',color:'var(--rose)'});
+  }
 
-  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`+
-    insights.map(i=>`<div class="insight" style="background:${i.bg}"><div class="insight-icon">${i.icon}</div><div><div class="insight-title" style="color:${i.color}">${i.title}</div><div class="insight-text">${i.text}</div></div></div>`).join('')+
-  `</div>`;
+  // Comparación clima vs WHO-5
+  if(Math.abs(avgCl-avgW)>20) {
+    const gap=Math.abs(avgCl-avgW);
+    ins.push({icon:'🔍',title:`Brecha entre Clima (${avgCl}%) y WHO-5 (${avgW}%)`,
+      text:`Hay una diferencia de ${gap} pts entre el clima percibido y el bienestar individual. Esto puede indicar factores externos al trabajo que afectan a los colaboradores.`,
+      bg:'var(--teal-l)',color:'var(--teal)'});
+  }
+
+  // NOM-035
+  ins.push({icon:'📜',title:'Cumplimiento NOM-035',
+    text:`El sistema está generando evidencia para el cumplimiento de la NOM-035 (factores de riesgo psicosocial). Con ${checkins.length} registros acumulados, tienes documentación de seguimiento activo.`,
+    bg:'var(--blue-l)',color:'var(--blue)'});
+
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">`+
+    ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
+      <div class="insight-icon">${i.icon}</div>
+      <div><div class="insight-title" style="color:${i.color}">${i.title}</div><div class="insight-text">${i.text}</div></div>
+    </div>`).join('')+`</div>`;
 }
 
-function buildOrgTrend() {
-  const meses = {};
+function buildTrend() {
+  const meses={};
   (DATA.checkins||[]).forEach(c=>{
-    const d = new Date(c.fecha_envio);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if (!meses[k]) meses[k]={who5:[],clima:[]};
-    if (c.who5_pct_0_100) meses[k].who5.push(num(c.who5_pct_0_100));
-    if (c.indice_clima_0_100) meses[k].clima.push(num(c.indice_clima_0_100));
+    const d=new Date(c.fecha_envio), k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if(!meses[k]) meses[k]={who5:[],clima:[]};
+    if(c.who5_pct_0_100) meses[k].who5.push(num(c.who5_pct_0_100));
+    if(c.indice_clima_0_100) meses[k].clima.push(num(c.indice_clima_0_100));
   });
-  const sorted = Object.keys(meses).sort().slice(-8);
-  const labels = sorted.map(k=>{const[y,m]=k.split('-');return new Date(y,m-1).toLocaleDateString('es-MX',{month:'short',year:'2-digit'});});
-  const who5  = sorted.map(k=>{const a=meses[k].who5;return a.length?avg(a):null;});
-  const clima = sorted.map(k=>{const a=meses[k].clima;return a.length?avg(a):null;});
-  return {labels,who5,clima};
-}
-
-function abrirCheckin() {
-  const links = (DATA.links||[]).find(l=>String(l.empleado_id)===String(EMPID));
-  if (links?.colaborador_url) window.open(links.colaborador_url,'_blank');
-  else toast('⚠️ No se encontró el link de tu formulario');
+  const sorted=Object.keys(meses).sort().slice(-8);
+  const labels=sorted.map(k=>{const[y,m]=k.split('-');return new Date(y,m-1).toLocaleDateString('es-MX',{month:'short',year:'2-digit'});});
+  return {
+    labels,
+    who5:sorted.map(k=>{const a=meses[k].who5;return a.length?avg(a):null;}),
+    clima:sorted.map(k=>{const a=meses[k].clima;return a.length?avg(a):null;}),
+  };
 }
 
 // ══════════════════════════════════════
 //  TOAST
 // ══════════════════════════════════════
 function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3000);
-}
-
-// ══════════════════════════════════════
-//  DEMO DATA
-// ══════════════════════════════════════
-function getDemoData() {
-  return {
-    colaboradores:[
-      {empleado_id:1,nombre:'Aimee Celeste',apellido_paterno:'Parra',apellido_materno:'Higuera',email:'aimeehiguera10@gmail.com',area:'Ventas',puesto:'Gerente',jefe_id:'',estatus:'ACTIVO',rol:'rrhh'},
-      {empleado_id:2,nombre:'Carlos',apellido_paterno:'Mendoza',email:'carlos@empresa.mx',area:'Operaciones',puesto:'Analista',jefe_id:1,estatus:'ACTIVO',rol:'colaborador'},
-      {empleado_id:3,nombre:'Valeria',apellido_paterno:'Ruiz',email:'valeria@empresa.mx',area:'Marketing',puesto:'Diseñadora',jefe_id:1,estatus:'ACTIVO',rol:'colaborador'},
-    ],
-    checkins:[
-      {checkin_id:'1',empleado_id:1,fecha_envio:'2025-10-16',energia_1_5:4,estres_1_5:3,pertenencia_1_5:4,apoyo_lider_1_5:2,claridad_obj_1_5:1,recuperacion_1_5:5,texto_motivo:'Mis compañeros',texto_drenaje:'yo',who5_total_0_25:16,who5_pct_0_100:64,indice_clima_0_100:56,alerta_generada:'FALSE',nivel_alerta:''},
-      {checkin_id:'2',empleado_id:1,fecha_envio:'2025-11-06',energia_1_5:3,estres_1_5:5,pertenencia_1_5:3,apoyo_lider_1_5:5,claridad_obj_1_5:2,recuperacion_1_5:4,texto_motivo:'El evento de sonora',texto_drenaje:'El desgaste',who5_total_0_25:11,who5_pct_0_100:44,indice_clima_0_100:52,alerta_generada:'TRUE',nivel_alerta:'amarillo'},
-      {checkin_id:'3',empleado_id:1,fecha_envio:'2025-12-18',energia_1_5:4,estres_1_5:2,pertenencia_1_5:5,apoyo_lider_1_5:2,claridad_obj_1_5:4,recuperacion_1_5:1,texto_motivo:'Los proyectos en puerta',texto_drenaje:'El viaje',who5_total_0_25:23,who5_pct_0_100:92,indice_clima_0_100:76,alerta_generada:'FALSE',nivel_alerta:''},
-      {checkin_id:'4',empleado_id:1,fecha_envio:'2026-01-09',energia_1_5:4,estres_1_5:2,pertenencia_1_5:5,apoyo_lider_1_5:5,claridad_obj_1_5:4,recuperacion_1_5:4,texto_motivo:'Los nuevos proyectos',texto_drenaje:'Asuntos personales',who5_total_0_25:25,who5_pct_0_100:100,indice_clima_0_100:88,alerta_generada:'FALSE',nivel_alerta:''},
-      {checkin_id:'5',empleado_id:1,fecha_envio:'2026-04-12',energia_1_5:4,estres_1_5:3,pertenencia_1_5:4,apoyo_lider_1_5:5,claridad_obj_1_5:5,recuperacion_1_5:5,texto_motivo:'el resultado de mis clientes',texto_drenaje:'el gerente',who5_total_0_25:21,who5_pct_0_100:84,indice_clima_0_100:84,alerta_generada:'FALSE',nivel_alerta:''},
-      {checkin_id:'6',empleado_id:2,fecha_envio:'2026-03-01',energia_1_5:3,estres_1_5:4,pertenencia_1_5:3,apoyo_lider_1_5:3,claridad_obj_1_5:3,recuperacion_1_5:3,texto_motivo:'Mi trabajo',texto_drenaje:'Las juntas',who5_total_0_25:13,who5_pct_0_100:52,indice_clima_0_100:56,alerta_generada:'TRUE',nivel_alerta:'amarillo'},
-      {checkin_id:'7',empleado_id:3,fecha_envio:'2026-03-15',energia_1_5:5,estres_1_5:2,pertenencia_1_5:5,apoyo_lider_1_5:4,claridad_obj_1_5:5,recuperacion_1_5:5,texto_motivo:'Los proyectos creativos',texto_drenaje:'Nada',who5_total_0_25:22,who5_pct_0_100:88,indice_clima_0_100:90,alerta_generada:'FALSE',nivel_alerta:''},
-    ],
-    alertas:[
-      {alerta_id:'1',empleado_id:1,fecha:'2025-11-06',regla_disparada:'WHO5<50 o Pertenencia<=2',nivel:'amarillo',estado:'cerrada',responsable:'RRHH'},
-      {alerta_id:'2',empleado_id:2,fecha:'2026-03-01',regla_disparada:'WHO5<50',nivel:'amarillo',estado:'abierta',responsable:'RRHH'},
-    ],
-    lideres:[],
-    rrhh:[],
-    links:[
-      {empleado_id:1,colaborador_url:'https://docs.google.com/forms/d/e/1FAIpQLSffdhM-aWuVAGYTAzcH4HbV8Nj8KHB7-DtIa7YhaaW2b4Nipw/viewform?usp=pp_url&entry.1296868566=1'},
-    ],
-    lideresCat:[],
-  };
 }
 </script>
 </body>
