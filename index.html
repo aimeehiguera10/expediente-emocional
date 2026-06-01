@@ -6,7 +6,7 @@
 <title>Expediente Emocional®</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <style>
 :root {
   --bg:#F5F6FA; --surface:#FFFFFF; --surface2:#F0F2F8; --border:#E8EAF2;
@@ -353,13 +353,30 @@ tr:hover td{background:var(--surface2)}
     <div class="login-title">Expediente<br>Emocional®</div>
     <div class="login-sub">Plataforma de bienestar emocional laboral.<br>Inicia sesión con tu cuenta de Google.</div>
 
-    <div id="g_id_signin" style="display:flex;justify-content:center"></div>
+    <div style="margin-bottom:16px">
+      <input id="login-email" type="email" placeholder="tu@email.com"
+        style="width:100%;padding:14px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.15);
+        background:rgba(255,255,255,0.08);color:#fff;font-size:15px;font-family:'Plus Jakarta Sans',sans-serif;
+        outline:none;transition:border .2s"
+        onkeydown="if(event.key==='Enter')doLogin()"
+        onfocus="this.style.borderColor='rgba(79,110,247,0.8)'"
+        onblur="this.style.borderColor='rgba(255,255,255,0.15)'"
+      >
+    </div>
+    <button onclick="doLogin()" style="width:100%;padding:14px;border-radius:12px;border:none;
+      background:linear-gradient(135deg,#4F6EF7,#7C3AED);color:#fff;font-size:15px;font-weight:800;
+      cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;letter-spacing:.3px"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(79,110,247,0.4)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      Entrar →
+    </button>
 
-    <div id="login-error">
-      ⚠️ Tu correo no está registrado en el sistema. Contacta a RRHH.
+    <div id="login-error" style="display:none;color:#F53B57;font-size:13px;margin-top:12px;padding:10px;
+      background:rgba(245,59,87,0.12);border-radius:8px">
+      ⚠️ Tu correo no está registrado. Contacta a RRHH.
     </div>
 
-    <div class="login-divider"><span></span><p>¿Por qué Gmail?</p><span></span></div>
+    <div class="login-divider"><span></span><p>Acceso seguro</p><span></span></div>
 
     <div class="login-features">
       <div class="login-feat">
@@ -730,75 +747,44 @@ let DATA   = {};
 let CHARTS = {};
 
 // ══════════════════════════════════════
-//  GOOGLE LOGIN
+//  LOGIN POR EMAIL
 // ══════════════════════════════════════
-window.onload = () => {
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID === '261344231037-ja21kolc9u33tjachubm9kcd85idt381.apps.googleusercontent.com'
-      ? '000000000000-demo.apps.googleusercontent.com'
-      : CLIENT_ID,
-    callback: handleCredential,
-    auto_select: false,
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('g_id_signin'),
-    { theme:'filled_blue', size:'large', width:300, text:'signin_with', locale:'es' }
-  );
+window.onload = () => { /* listo */ };
 
-  // Demo sin OAuth para desarrollo
-  if (API_KEY === 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0') {
-    initDemo();
+async function doLogin() {
+  const emailInput = document.getElementById('login-email');
+  const email = (emailInput?.value || '').toLowerCase().trim();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!email) {
+    errEl.textContent = '⚠️ Por favor ingresa tu correo.';
+    errEl.style.display = 'block';
+    return;
   }
-};
-
-async function handleCredential(response) {
-  const payload = parseJwt(response.credential);
-  const email = payload.email;
-  const name  = payload.name;
-  const pic   = payload.picture;
-  await loginWithEmail(email, name, pic);
-}
-
-function parseJwt(token) {
-  const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-  return JSON.parse(atob(base64));
-}
-
-async function loginWithEmail(email, name, pic) {
+  // Mostrar loading
+  const btn = document.querySelector('.login-submit-btn');
+  if (btn) { btn.textContent = 'Verificando...'; btn.disabled = true; }
   try {
     await loadData();
-    const emp = DATA.colaboradores?.find(c =>
-      (c.email||'').toLowerCase().trim() === email.toLowerCase().trim()
+    const emp = (DATA.colaboradores||[]).find(c =>
+      (c.email||'').toLowerCase().trim() === email
     );
     if (!emp) {
-      document.getElementById('login-error').style.display = 'block';
+      errEl.textContent = '⚠️ Tu correo no está registrado. Contacta a RRHH.';
+      errEl.style.display = 'block';
+      if (btn) { btn.textContent = 'Entrar →'; btn.disabled = false; }
       return;
     }
-    USER  = { email, name: name || `${emp.nombre} ${emp.apellido_paterno||''}`.trim(), pic };
+    USER  = { email, name: `${emp.nombre} ${emp.apellido_paterno||''}`.trim(), pic:'' };
     ROLE  = (emp.rol || 'colaborador').toLowerCase();
     EMPID = emp.empleado_id;
     initApp();
   } catch(e) {
-    document.getElementById('login-error').style.display = 'block';
+    errEl.textContent = '⚠️ Error al conectar. Verifica tu conexión.';
+    errEl.style.display = 'block';
+    if (btn) { btn.textContent = 'Entrar →'; btn.disabled = false; }
     console.error(e);
   }
-}
-
-// Demo mode (sin API key real)
-function initDemo() {
-  DATA = getDemoData();
-  // Auto-login como RRHH para demo
-  USER  = { email:'aimeehiguera10@gmail.com', name:'Aimee Celeste Parra', pic:'' };
-  ROLE  = 'rrhh';
-  EMPID = 1;
-
-  // Botón demo en login
-  const card = document.querySelector('.login-card');
-  const demoBtn = document.createElement('button');
-  demoBtn.textContent = '▶ Ver demo (sin API key)';
-  demoBtn.style.cssText = 'margin-top:16px;width:100%;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:12px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700';
-  demoBtn.onclick = () => initApp();
-  card.appendChild(demoBtn);
 }
 
 function initApp() {
@@ -811,11 +797,13 @@ function initApp() {
 }
 
 function logout() {
-  google.accounts.id.disableAutoSelect();
   USER = null; ROLE = null; EMPID = null;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('login-error').style.display = 'none';
+  const errEl = document.getElementById('login-error');
+  if (errEl) errEl.style.display = 'none';
+  const emailInput = document.getElementById('login-email');
+  if (emailInput) emailInput.value = '';
 }
 
 // ══════════════════════════════════════
