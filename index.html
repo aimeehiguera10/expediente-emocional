@@ -878,21 +878,25 @@ async function fetchSheet(tab) {
 }
 
 async function loadData() {
-  if (API_KEY === 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0') {
+  if (API_KEY === 'TU_API_KEY_AQUI') {
     DATA = getDemoData();
     return;
   }
   try {
-    const [colaboradores, checkins, lideres, rrhh, alertas, lideresCat] = await Promise.all([
+    const [colaboradores, checkins, lideres, rrhh, alertas] = await Promise.all([
       fetchSheet(TABS.colaboradores), fetchSheet(TABS.checkins),
       fetchSheet(TABS.lideres),       fetchSheet(TABS.rrhh),
-      fetchSheet(TABS.alertas),       fetchSheet(TABS.lideresCat),
+      fetchSheet(TABS.alertas),
     ]);
-    DATA = { colaboradores, checkins, lideres, rrhh, alertas, lideresCat };
-    toast('✅ Datos actualizados');
+    // También intentar LINKS_Prefill
+    let links = [];
+    try { links = await fetchSheet('LINKS_Prefill'); } catch(e) {}
+    DATA = { colaboradores, checkins, lideres, rrhh, alertas, links, lideresCat:[] };
+    toast('✅ Datos en tiempo real');
   } catch(e) {
+    console.error('Error cargando datos:', e);
     DATA = getDemoData();
-    toast('⚠️ Usando datos demo — configura tu API key');
+    toast('⚠️ Error al cargar datos del Sheet');
   }
   renderAll();
 }
