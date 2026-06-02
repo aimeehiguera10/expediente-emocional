@@ -730,12 +730,14 @@ function logout() {
 function buildNav() {
   let html='';
   if(ROLE==='rrhh') html+=`<div class="sb-section">RRHH</div><button class="sb-item" onclick="switchView('rrhh',this)"><span class="ic">🏢</span>Panel Ejecutivo</button>`;
-  if(ROLE==='lider'||ROLE==='rrhh') html+=`<div class="sb-section">Liderazgo</div><button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
+  // Lider role: also check if user appears in BD_Lideres_Catalogo
+  const esLider = ROLE==='lider'||ROLE==='rrhh';
+  if(esLider) html+=`<div class="sb-section">Liderazgo</div><button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
   html+=`<div class="sb-section">Personal</div><button class="sb-item" onclick="switchView('mi',this)"><span class="ic">💙</span>Mi Bienestar</button>`;
   document.getElementById('nav-body').innerHTML=html;
 }
 
-function defaultView() { return ROLE==='rrhh'?'rrhh':ROLE==='lider'?'equipo':'mi'; }
+function defaultView() { return ROLE==='rrhh'?'rrhh':(ROLE==='lider')?'equipo':'mi'; }
 
 function switchView(id, btn) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -797,17 +799,18 @@ const avg = arr => { const a=arr.filter(v=>v!=null&&!isNaN(v)); return a.length?
 const fmtDate = d => {
   if(!d) return '—';
   try {
-    let dt;
     const s = String(d).trim();
-    // Google Sheets format: DD/MM/YYYY HH:MM:SS or DD/MM/YYYY
-    if(/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-      const [datePart, timePart] = s.split(' ');
-      const [day, month, year] = datePart.split('/');
-      dt = new Date(`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}${timePart?' '+timePart:''}`);
+    if(!s) return '—';
+    let dt;
+    // Google Sheets API returns dates as "D/M/YYYY" or "DD/MM/YYYY" or "D/M/YYYY HH:MM:SS"
+    const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(slashMatch) {
+      const [, day, month, year] = slashMatch;
+      dt = new Date(parseInt(year), parseInt(month)-1, parseInt(day));
     } else {
       dt = new Date(s);
     }
-    if(isNaN(dt.getTime())) return s.split(' ')[0] || '—';
+    if(!dt || isNaN(dt.getTime())) return s.split(/[\s\/]/)[0] || '—';
     return dt.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
   } catch(e) { return String(d).split(' ')[0] || '—'; }
 };
@@ -1022,7 +1025,7 @@ function renderInsightsMi(hist, lc, emp) {
 // ══════════════════════════════════════
 function renderEquipo() {
   const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
-  const team=ROLE==='rrhh'?activos:activos.filter(c=>String(c.jefe_id)===String(EMPID));
+  const team=ROLE==='rrhh'?activos:activos.filter(c=>c.jefe_id&&String(c.jefe_id).trim()===String(EMPID).trim());
   const allW=team.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
   const allCl=team.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
   const avgW=avg(allW), avgCl=avg(allCl);
