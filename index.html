@@ -698,7 +698,8 @@ async function doLogin() {
       return;
     }
     USER  = { email, name:`${emp.nombre} ${emp.apellido_paterno||''}`.trim() };
-    ROLE  = (emp.rol||'colaborador').toLowerCase();
+    const rawRol = (emp.rol||'colaborador').toLowerCase().trim();
+  ROLE  = rawRol.normalize('NFD').replace(/[\u0300-\u036f]/g,'');  // remove accents: líder→lider
     EMPID = emp.empleado_id;
     initApp();
   } catch(e) {
