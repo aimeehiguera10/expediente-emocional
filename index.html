@@ -794,7 +794,23 @@ function renderAll() { renderMi(); if(ROLE==='lider'||ROLE==='rrhh') renderEquip
 // ══════════════════════════════════════
 const num = v => isNaN(parseFloat(v))?0:parseFloat(v);
 const avg = arr => { const a=arr.filter(v=>v!=null&&!isNaN(v)); return a.length?Math.round(a.reduce((x,y)=>+x+ +y,0)/a.length):0; };
-const fmtDate = d => { if(!d) return '—'; try{ return new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}); }catch{return d;} };
+const fmtDate = d => {
+  if(!d) return '—';
+  try {
+    let dt;
+    const s = String(d).trim();
+    // Google Sheets format: DD/MM/YYYY HH:MM:SS or DD/MM/YYYY
+    if(/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      const [datePart, timePart] = s.split(' ');
+      const [day, month, year] = datePart.split('/');
+      dt = new Date(`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}${timePart?' '+timePart:''}`);
+    } else {
+      dt = new Date(s);
+    }
+    if(isNaN(dt.getTime())) return s.split(' ')[0] || '—';
+    return dt.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  } catch(e) { return String(d).split(' ')[0] || '—'; }
+};
 const killChart = id => { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} };
 const badge = (t,c) => `<span class="badge ${c}">${t}</span>`;
 const sem = s => s==3?'🟢':s==2?'🟡':s==1?'🔴':'—';
@@ -1054,7 +1070,7 @@ function renderEquipo() {
     const openAl=(DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
     let trend='→';
     if(hist.length>=2){const d=num(hist[hist.length-1].who5_pct_0_100)-num(hist[hist.length-2].who5_pct_0_100);trend=d>5?`<span style="color:var(--green)">↑ +${d}</span>`:d<-5?`<span style="color:var(--rose)">↓ ${d}</span>`:`<span style="color:var(--text3)">→</span>`;}
-    return `<tr style="cursor:pointer" onclick="openExpediente(${emp.empleado_id})" title="Ver expediente">
+    return `<tr style="cursor:pointer" data-empid="${emp.empleado_id}" class="exp-row" title="Ver expediente ▸">
       <td><div style="display:flex;align-items:center;gap:10px">
         <div class="av" style="background:${w?W.color(w)+'22':'var(--surface2)'};color:${w?W.color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
         <div><div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div><div style="color:var(--text3);font-size:11px">${emp.puesto||''}</div></div>
@@ -1158,7 +1174,7 @@ function renderRRHH() {
   document.getElementById('rk-activos').textContent=activos.length;
   document.getElementById('rk-participacion').textContent=`${participacion}% con check-in`;
   document.getElementById('rk-alertas').textContent=alertasAbiertas;
-  document.getElementById('rrhh-date').textContent='Actualizado: '+new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('rrhh-date').textContent='Actualizado: '+new Date().toLocaleString('es-MX',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
 
   // Trend
   const trend=buildTrend();
@@ -1233,7 +1249,7 @@ function renderTablaRRHH(activos) {
     const [wl,wc]=w!=null?W.label(w):['Sin datos',''];
     const openAl=(DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
     const rolCls=emp.rol==='rrhh'?'ba':emp.rol==='lider'?'bt':'bg';
-    return `<tr style="cursor:pointer" onclick="openExpediente(${emp.empleado_id})" title="Ver expediente completo">
+    return `<tr style="cursor:pointer" data-empid="${emp.empleado_id}" class="exp-row" title="Ver expediente completo ▸">
       <td><div style="display:flex;align-items:center;gap:10px">
         <div class="av" style="background:${w?W.color(w)+'22':'var(--surface2)'};color:${w?W.color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
         <div><div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div><div style="color:var(--text3);font-size:11px">${emp.email||''}</div></div>
@@ -1251,7 +1267,8 @@ function renderTablaRRHH(activos) {
 
 function filtrarRRHH(q) {
   const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
-  renderTablaRRHH(activos.filter(c=>`${c.nombre} ${c.apellido_paterno||''} ${c.email||''} ${c.area||''}`.toLowerCase().includes(q.toLowerCase())));
+  if(!q.trim()) { renderTablaRRHH(activos); return; }
+  renderTablaRRHH(activos.filter(c=>`${c.nombre} ${c.apellido_paterno||''} ${c.apellido_materno||''} ${c.email||''} ${c.area||''} ${c.puesto||''}`.toLowerCase().includes(q.toLowerCase())));
 }
 
 function renderInsightsRRHH(activos, avgW, avgCl, alertasAbiertas, participacion, conDatos) {
@@ -1341,6 +1358,20 @@ function buildTrend() {
 // ══════════════════════════════════════
 //  TOAST
 // ══════════════════════════════════════
+// Event delegation for expediente rows
+document.addEventListener('click', function(e) {
+  const row = e.target.closest('tr.exp-row');
+  if(row) {
+    const empId = row.getAttribute('data-empid');
+    if(empId) openExpediente(empId);
+  }
+});
+
+// Hover style for exp-row
+const expStyle = document.createElement('style');
+expStyle.textContent = 'tr.exp-row:hover td { background: rgba(91,142,240,0.08) !important; }';
+document.head.appendChild(expStyle);
+
 function toast(msg) {
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
@@ -1536,7 +1567,7 @@ let EXP_EMP_ID = null;
 let EXP_NOTAS  = {};  // { empId: [{autor, fecha, texto}] }
 
 function openExpediente(empId) {
-  EXP_EMP_ID = empId;
+  EXP_EMP_ID = String(empId);
   const emp = (DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(empId));
   if(!emp) return;
 
