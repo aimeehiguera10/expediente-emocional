@@ -668,6 +668,7 @@ const API_KEY  = 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0';
 const TABS = {
   colaboradores:'BD_Colaboradores', checkins:'BD_CheckinColaboradores',
   lideres:'BD_Lideres', rrhh:'BD_RRHH', alertas:'BD_Alertas',
+  planes:'BD_PlanesAccion',
 };
 
 // ══════════════════════════════════════
@@ -771,14 +772,14 @@ async function fetchSheet(tab) {
 
 async function loadData() {
   try {
-    const [colaboradores,checkins,lideres,rrhh,alertas] = await Promise.all([
+    const [colaboradores,checkins,lideres,rrhh,alertas,planes] = await Promise.all([
       fetchSheet(TABS.colaboradores), fetchSheet(TABS.checkins),
       fetchSheet(TABS.lideres),       fetchSheet(TABS.rrhh),
-      fetchSheet(TABS.alertas),
+      fetchSheet(TABS.alertas),       fetchSheet(TABS.planes),
     ]);
     let links=[];
     try { links=await fetchSheet('LINKS_Prefill'); } catch(e){}
-    DATA={colaboradores,checkins,lideres,rrhh,alertas,links};
+    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links};
     if(USER) toast('✅ Datos actualizados');
   } catch(e) {
     console.error('Error:',e);
@@ -1053,7 +1054,7 @@ function renderEquipo() {
     const openAl=(DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
     let trend='→';
     if(hist.length>=2){const d=num(hist[hist.length-1].who5_pct_0_100)-num(hist[hist.length-2].who5_pct_0_100);trend=d>5?`<span style="color:var(--green)">↑ +${d}</span>`:d<-5?`<span style="color:var(--rose)">↓ ${d}</span>`:`<span style="color:var(--text3)">→</span>`;}
-    return `<tr>
+    return `<tr style="cursor:pointer" onclick="openExpediente(${emp.empleado_id})" title="Ver expediente">
       <td><div style="display:flex;align-items:center;gap:10px">
         <div class="av" style="background:${w?W.color(w)+'22':'var(--surface2)'};color:${w?W.color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
         <div><div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div><div style="color:var(--text3);font-size:11px">${emp.puesto||''}</div></div>
@@ -1232,7 +1233,7 @@ function renderTablaRRHH(activos) {
     const [wl,wc]=w!=null?W.label(w):['Sin datos',''];
     const openAl=(DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
     const rolCls=emp.rol==='rrhh'?'ba':emp.rol==='lider'?'bt':'bg';
-    return `<tr>
+    return `<tr style="cursor:pointer" onclick="openExpediente(${emp.empleado_id})" title="Ver expediente completo">
       <td><div style="display:flex;align-items:center;gap:10px">
         <div class="av" style="background:${w?W.color(w)+'22':'var(--surface2)'};color:${w?W.color(w):'var(--text3)'}">${emp.nombre.charAt(0)}</div>
         <div><div style="font-weight:700">${emp.nombre} ${emp.apellido_paterno||''}</div><div style="color:var(--text3);font-size:11px">${emp.email||''}</div></div>
@@ -1346,5 +1347,688 @@ function toast(msg) {
   setTimeout(()=>t.classList.remove('show'),3000);
 }
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     EXPEDIENTE INDIVIDUAL — MODAL
+══════════════════════════════════════════════════════════════ -->
+<style>
+/* ── MODAL BASE ── */
+#exp-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);
+  animation:fadeIn .2s ease;
+}
+#exp-overlay.open{display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto}
+#exp-modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;width:100%;max-width:900px;
+  box-shadow:0 40px 100px rgba(0,0,0,0.7);
+  animation:slideUp .35s cubic-bezier(.22,1,.36,1);
+  flex-shrink:0;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── MODAL HEADER ── */
+.exp-header{
+  display:flex;align-items:flex-start;gap:18px;
+  padding:28px;border-bottom:1px solid var(--border);
+  position:relative;
+}
+.exp-av-big{
+  width:64px;height:64px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:26px;color:#fff;
+}
+.exp-info{flex:1}
+.exp-name{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:var(--text);line-height:1.1}
+.exp-meta{color:var(--text2);font-size:13px;margin-top:4px}
+.exp-badges{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.exp-close{
+  position:absolute;top:20px;right:20px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:50%;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:16px;color:var(--text2);
+  transition:all .15s;
+}
+.exp-close:hover{background:var(--rose-l);color:var(--rose);border-color:var(--rose)}
+
+/* ── RIESGO SEMÁFORO ── */
+.exp-risk{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:12px 20px;border-radius:var(--r-sm);border:1px solid;
+  flex-shrink:0;text-align:center;min-width:90px;
+}
+.exp-risk-val{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;line-height:1}
+.exp-risk-lbl{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+
+/* ── TABS ── */
+.exp-tabs{display:flex;gap:2px;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto}
+.exp-tab{
+  padding:12px 18px;font-size:13px;font-weight:600;color:var(--text2);
+  cursor:pointer;border:none;background:none;
+  border-bottom:2px solid transparent;
+  font-family:'Sora',sans-serif;white-space:nowrap;
+  transition:all .18s;
+}
+.exp-tab:hover{color:var(--text)}
+.exp-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+
+/* ── PANELS ── */
+.exp-panel{display:none;padding:24px 28px;max-height:65vh;overflow-y:auto}
+.exp-panel.active{display:block}
+
+/* ── SECTION ── */
+.exp-section{margin-bottom:24px}
+.exp-section-title{
+  font-size:11px;font-weight:700;color:var(--text3);
+  letter-spacing:1.2px;text-transform:uppercase;
+  margin-bottom:12px;padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ── INFO GRID ── */
+.exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.exp-field{background:var(--surface2);border-radius:var(--r-xs);padding:12px 14px}
+.exp-field-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+.exp-field-val{font-size:13px;font-weight:600;color:var(--text)}
+
+/* ── TIMELINE ── */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:1px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:18px}
+.tl-dot{
+  position:absolute;left:-20px;top:3px;
+  width:10px;height:10px;border-radius:50%;border:2px solid var(--surface);
+}
+.tl-date{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:600}
+.tl-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.tl-text{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* ── PLAN CARD ── */
+.plan-card{background:var(--surface2);border-radius:var(--r-sm);padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+.plan-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:12px}
+.plan-obj{font-size:13px;font-weight:700;color:var(--text);line-height:1.4}
+.plan-prog-wrap{margin:8px 0}
+.plan-prog-bar{height:6px;background:var(--surface);border-radius:20px;overflow:hidden}
+.plan-prog-fill{height:100%;border-radius:20px;transition:width .8s ease}
+.plan-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.plan-meta-item{font-size:11px;color:var(--text3)}
+.plan-meta-item strong{color:var(--text2)}
+
+/* ── ALERTA CARD ── */
+.alerta-card{background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;border-left:3px solid;display:flex;gap:12px;align-items:flex-start}
+.alerta-body{flex:1}
+.alerta-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.alerta-rule{font-size:12px;color:var(--text2);margin-bottom:6px}
+.alerta-accion{font-size:12px;color:var(--teal);font-style:italic}
+
+/* ── NOTAS ── */
+.nota-card{background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.nota-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.nota-autor{font-size:11px;font-weight:700;color:var(--blue)}
+.nota-fecha{font-size:10px;color:var(--text3)}
+.nota-text{font-size:13px;color:var(--text);line-height:1.5}
+.nota-form{margin-top:16px}
+.nota-textarea{
+  width:100%;min-height:80px;padding:12px;
+  background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--r-sm);color:var(--text);
+  font-family:'Sora',sans-serif;font-size:13px;resize:vertical;
+  outline:none;transition:border-color .2s;
+}
+.nota-textarea:focus{border-color:var(--blue)}
+.nota-submit{margin-top:8px;padding:8px 20px;background:var(--grad1);color:#fff;border:none;border-radius:var(--r-xs);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s}
+.nota-submit:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(91,142,240,0.3)}
+
+/* ── RESUMEN IA ── */
+.resumen-ia{
+  background:linear-gradient(135deg,rgba(91,142,240,0.08),rgba(168,85,247,0.08));
+  border:1px solid rgba(91,142,240,0.2);
+  border-radius:var(--r-sm);padding:18px;
+  font-size:13px;color:var(--text);line-height:1.7;
+}
+.resumen-ia-header{font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+
+/* ── PSICO TABLE ── */
+.psico-row{background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.psico-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.psico-tipo{font-size:13px;font-weight:700;color:var(--text)}
+.psico-puntaje{font-family:'Playfair Display',serif;font-size:22px;font-weight:900}
+.psico-interp{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px}
+.psico-meta{font-size:11px;color:var(--text3)}
+</style>
+
+<!-- MODAL HTML -->
+<div id="exp-overlay" onclick="if(event.target===this)closeExpediente()">
+  <div id="exp-modal">
+
+    <!-- Header -->
+    <div class="exp-header">
+      <div class="exp-av-big" id="exp-av">?</div>
+      <div class="exp-info">
+        <div class="exp-name" id="exp-name">—</div>
+        <div class="exp-meta" id="exp-meta">—</div>
+        <div class="exp-badges" id="exp-badges"></div>
+      </div>
+      <div class="exp-risk" id="exp-risk">
+        <div class="exp-risk-val" id="exp-risk-val">—</div>
+        <div class="exp-risk-lbl" id="exp-risk-lbl">Riesgo</div>
+      </div>
+      <div class="exp-close" onclick="closeExpediente()">✕</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="exp-tabs" id="exp-tabs"></div>
+
+    <!-- Panels -->
+    <div id="exp-panels"></div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  EXPEDIENTE INDIVIDUAL
+// ══════════════════════════════════════
+let EXP_EMP_ID = null;
+let EXP_NOTAS  = {};  // { empId: [{autor, fecha, texto}] }
+
+function openExpediente(empId) {
+  EXP_EMP_ID = empId;
+  const emp = (DATA.colaboradores||[]).find(c=>String(c.empleado_id)===String(empId));
+  if(!emp) return;
+
+  // Cargar notas del storage
+  try {
+    const stored = localStorage.getItem('exp_notas_'+empId);
+    if(stored) EXP_NOTAS[empId] = JSON.parse(stored);
+    else EXP_NOTAS[empId] = EXP_NOTAS[empId] || [];
+  } catch(e) { EXP_NOTAS[empId] = EXP_NOTAS[empId] || []; }
+
+  // Header
+  const hist = allCheckins(empId);
+  const lc   = hist[hist.length-1];
+  const w    = lc ? num(lc.who5_pct_0_100) : null;
+  const risk = calcRiesgo(empId, hist, w);
+
+  const av = document.getElementById('exp-av');
+  av.textContent = emp.nombre.charAt(0).toUpperCase();
+  av.style.background = w ? W.color(w)+'33' : 'var(--surface2)';
+  av.style.color = w ? W.color(w) : 'var(--text3)';
+  av.style.border = `2px solid ${w ? W.color(w)+'66' : 'var(--border)'}`;
+
+  document.getElementById('exp-name').textContent = `${emp.nombre} ${emp.apellido_paterno||''} ${emp.apellido_materno||''}`.trim();
+  document.getElementById('exp-meta').textContent = `${emp.puesto||'—'} · ${emp.area||'—'} · Antigüedad: ${emp.antiguedad_mes||'—'} meses`;
+
+  const badgesEl = document.getElementById('exp-badges');
+  badgesEl.innerHTML = [
+    badge(emp.estatus||'—', emp.estatus==='ACTIVO'?'bg':'br'),
+    badge(emp.rol||'colaborador', emp.rol==='rrhh'?'ba':emp.rol==='lider'?'bt':'bg'),
+    emp.esquema_trabajo ? badge(emp.esquema_trabajo,'bb') : '',
+    w!=null ? badge(`WHO-5: ${w}%`, ...W.label(w)) : '',
+  ].join('');
+
+  // Riesgo semáforo
+  const riskEl = document.getElementById('exp-risk');
+  const riskVal = document.getElementById('exp-risk-val');
+  const riskLbl = document.getElementById('exp-risk-lbl');
+  const riskColors = {alto:['var(--rose)','var(--rose-l)','rgba(240,91,122,0.2)'],medio:['var(--amber)','var(--amber-l)','rgba(245,183,49,0.2)'],bajo:['var(--green)','var(--green-l)','rgba(34,212,114,0.2)'],sin:['var(--text3)','var(--surface2)','var(--border)']};
+  const [rc,rbg,rborder] = riskColors[risk.nivel]||riskColors.sin;
+  riskEl.style.background = rbg; riskEl.style.borderColor = rborder;
+  riskVal.textContent = risk.emoji; riskVal.style.color = rc;
+  riskLbl.textContent = risk.nivel==='sin'?'Sin datos':risk.nivel.charAt(0).toUpperCase()+risk.nivel.slice(1);
+  riskLbl.style.color = rc;
+
+  // Build tabs según rol
+  buildExpTabs(emp, empId);
+
+  document.getElementById('exp-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeExpediente() {
+  document.getElementById('exp-overlay').classList.remove('open');
+  document.body.style.overflow='';
+  EXP_EMP_ID = null;
+}
+
+function calcRiesgo(empId, hist, who5) {
+  if(!hist.length) return {nivel:'sin',emoji:'?'};
+  const alertasAbiertas = (DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(empId)&&a.estado==='abierta').length;
+  const last5 = hist.slice(-5).map(c=>num(c.estres_1_5));
+  const avgEstres = last5.length ? avg(last5) : 0;
+  let score = 0;
+  if(who5<40) score+=3; else if(who5<60) score+=1;
+  if(alertasAbiertas>=2) score+=2; else if(alertasAbiertas===1) score+=1;
+  if(avgEstres>=4) score+=2; else if(avgEstres>=3) score+=1;
+  if(hist.length>=3){const d=num(hist[hist.length-1].who5_pct_0_100)-num(hist[0].who5_pct_0_100);if(d<-20) score+=1;}
+  if(score>=4) return {nivel:'alto',emoji:'🔴'};
+  if(score>=2) return {nivel:'medio',emoji:'🟡'};
+  return {nivel:'bajo',emoji:'🟢'};
+}
+
+function buildExpTabs(emp, empId) {
+  const isRRHH = ROLE==='rrhh';
+  const isLider = ROLE==='lider'||ROLE==='rrhh';
+  const isOwn = String(emp.empleado_id)===String(EMPID);
+
+  const tabs = [
+    {id:'perfil',    label:'👤 Perfil',        always:true},
+    {id:'bienestar', label:'💙 Bienestar',      always:true},
+    {id:'evaluaciones',label:'📋 Evaluaciones', show:isLider},
+    {id:'alertas',   label:'🔔 Alertas & Planes',show:isLider},
+    {id:'psico',     label:'🧪 Psicométricos',  show:isRRHH},
+    {id:'timeline',  label:'📅 Línea de tiempo', show:isLider},
+    {id:'notas',     label:'🗒️ Notas internas',  show:isLider},
+  ].filter(t=>t.always||t.show);
+
+  document.getElementById('exp-tabs').innerHTML = tabs.map((t,i)=>
+    `<button class="exp-tab ${i===0?'active':''}" onclick="switchExpTab('${t.id}',this)">${t.label}</button>`
+  ).join('');
+
+  document.getElementById('exp-panels').innerHTML = tabs.map((t,i)=>
+    `<div id="exp-panel-${t.id}" class="exp-panel ${i===0?'active':''}">${buildExpPanel(t.id, emp, empId)}</div>`
+  ).join('');
+
+  // Render charts after DOM insert
+  renderExpBienestarChart(empId);
+}
+
+function switchExpTab(id, btn) {
+  document.querySelectorAll('.exp-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.exp-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById('exp-panel-'+id);
+  if(panel) panel.classList.add('active');
+  if(id==='bienestar') renderExpBienestarChart(EXP_EMP_ID);
+}
+
+function buildExpPanel(id, emp, empId) {
+  const hist = allCheckins(empId);
+  const lc = hist[hist.length-1];
+  const isRRHH = ROLE==='rrhh';
+  const isOwn = String(empId)===String(EMPID);
+
+  switch(id) {
+
+    case 'perfil': {
+      const isColabOwn = isOwn && ROLE==='colaborador';
+      const canSeeFull = isRRHH || isColabOwn;
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Información Laboral</div>
+          <div class="exp-grid">
+            ${ef('ID Empleado', emp.empleado_id)}
+            ${ef('Área', emp.area||'—')}
+            ${ef('Puesto', emp.puesto||'—')}
+            ${ef('Antigüedad', emp.antiguedad_mes ? emp.antiguedad_mes+' meses' : '—')}
+            ${ef('Esquema', emp.esquema_trabajo||'—')}
+            ${ef('Fecha de Alta', fmtDate(emp.fecha_alta))}
+            ${ef('Jefe', emp.jefe_nombre||'—')}
+            ${ef('Estatus', emp.estatus||'—')}
+            ${ef('Rol', emp.rol||'colaborador')}
+          </div>
+        </div>
+        ${canSeeFull ? `
+        <div class="exp-section">
+          <div class="exp-section-title">Contacto de Emergencia</div>
+          <div class="exp-grid">
+            ${ef('Contacto', emp.contacto_emergencia||'—')}
+            ${ef('Parentesco', emp.parentesco_emergencia||'—')}
+            ${ef('Teléfono', emp.tel_emergencia||'—')}
+          </div>
+        </div>
+        <div class="exp-section">
+          <div class="exp-section-title">Datos Personales</div>
+          <div class="exp-grid">
+            ${ef('Email', emp.email||'—')}
+            ${ef('Ciudad', emp.domicilio_ciudad||'—')}
+            ${ef('Estado', emp.domicilio_estado||'—')}
+          </div>
+        </div>` : ''}
+        ${isRRHH ? `
+        <div class="exp-section">
+          <div class="exp-section-title">Consentimientos y Notas Generales</div>
+          <div class="exp-grid">
+            ${ef('Consentimiento General', emp.consentimiento_general||'—')}
+            ${ef('Consentimiento Sensible', emp.consent_sensible||'—')}
+          </div>
+          ${emp.notas ? `<div style="margin-top:12px;padding:14px;background:var(--surface2);border-radius:var(--r-xs);font-size:13px;color:var(--text2);line-height:1.6">${emp.notas}</div>` : ''}
+        </div>` : ''}
+        ${buildResumenIA(emp, hist, lc)}
+      `;
+    }
+
+    case 'bienestar': {
+      const w = lc ? num(lc.who5_pct_0_100) : null;
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Evolución WHO-5 y Clima</div>
+          <div style="height:200px"><canvas id="exp-who5-chart"></canvas></div>
+        </div>
+        <div class="exp-section">
+          <div class="exp-section-title">Último Check-in — Dimensiones</div>
+          ${lc ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div>
+              ${[
+                {l:'Energía',v:num(lc.energia_1_5),c:'#5B8EF0'},
+                {l:'Estrés (inv.)',v:6-num(lc.estres_1_5),c:'#F05B7A'},
+                {l:'Pertenencia',v:num(lc.pertenencia_1_5),c:'#00D4C8'},
+              ].map(d=>`<div class="dim-row">
+                <div class="dim-lbl">${d.l}</div>
+                <div class="dim-track"><div class="dim-fill" style="width:${(d.v/5)*100}%;background:${d.c}"></div></div>
+                <div class="dim-num" style="color:${d.c}">${d.v}/5</div>
+              </div>`).join('')}
+            </div>
+            <div>
+              ${[
+                {l:'Apoyo líder',v:num(lc.apoyo_lider_1_5),c:'#22D472'},
+                {l:'Claridad obj.',v:num(lc.claridad_obj_1_5),c:'#F5B731'},
+                {l:'Recuperación',v:num(lc.recuperacion_1_5),c:'#A855F7'},
+              ].map(d=>`<div class="dim-row">
+                <div class="dim-lbl">${d.l}</div>
+                <div class="dim-track"><div class="dim-fill" style="width:${(d.v/5)*100}%;background:${d.c}"></div></div>
+                <div class="dim-num" style="color:${d.c}">${d.v}/5</div>
+              </div>`).join('')}
+            </div>
+          </div>
+          ${lc.texto_motivo||lc.texto_drenaje ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+            ${lc.texto_motivo?`<div style="background:var(--green-l);border-radius:var(--r-xs);padding:12px"><div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px;letter-spacing:.8px;text-transform:uppercase">Me motivó</div><div style="font-size:13px;color:var(--text)">${lc.texto_motivo}</div></div>`:''}
+            ${lc.texto_drenaje?`<div style="background:var(--rose-l);border-radius:var(--r-xs);padding:12px"><div style="font-size:10px;font-weight:700;color:var(--rose);margin-bottom:4px;letter-spacing:.8px;text-transform:uppercase">Me drenó</div><div style="font-size:13px;color:var(--text)">${lc.texto_drenaje}</div></div>`:''}
+          </div>` : ''}
+          ` : '<div class="empty"><span class="empty-icon">💙</span>Sin check-ins registrados</div>'}
+        </div>
+        <div class="exp-section">
+          <div class="exp-section-title">Historial Completo</div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>WHO-5</th><th>Clima</th><th>Energía</th><th>Estrés</th><th>Pertenencia</th><th>Estado</th></tr></thead>
+              <tbody>${hist.length?[...hist].reverse().map(c=>{const cw=num(c.who5_pct_0_100);return`<tr>
+                <td style="font-size:12px;color:var(--text2)">${fmtDate(c.fecha_envio)}</td>
+                <td><span style="font-weight:800;color:${W.color(cw)}">${cw}%</span></td>
+                <td style="color:var(--teal);font-weight:700">${num(c.indice_clima_0_100)}%</td>
+                <td>${num(c.energia_1_5)}/5</td><td>${num(c.estres_1_5)}/5</td><td>${num(c.pertenencia_1_5)}/5</td>
+                <td>${c.nivel_alerta?badge('⚠ '+c.nivel_alerta,'ba'):badge('OK','bg')}</td>
+              </tr>`;}).join(''):'<tr><td colspan="7" class="empty">Sin datos</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    case 'evaluaciones': {
+      const evals = (DATA.lideres||[]).filter(e=>String(e.empleado_id)===String(empId)).sort((a,b)=>new Date(b.fecha_respuesta)-new Date(a.fecha_respuesta));
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Evaluaciones del Líder (${evals.length} registros)</div>
+          ${evals.length ? evals.map(ev=>`
+            <div class="plan-card">
+              <div class="plan-header">
+                <div>
+                  <div style="font-size:12px;color:var(--text3);margin-bottom:4px">${fmtDate(ev.fecha_respuesta)}</div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:22px">${sem(num(ev.semaforo_objetivo))}</span>
+                    ${ev.cumpl_objetivo_pct?`<span style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:${num(ev.cumpl_objetivo_pct)>=80?'var(--green)':'var(--amber)'}">${ev.cumpl_objetivo_pct}%</span><span style="font-size:12px;color:var(--text2)">cumplimiento</span>`:''}
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  ${ev.colaboracion_1_5?badge('Colab: '+ev.colaboracion_1_5+'/5','bt'):''}
+                  ${ev.disposicion_1_5?badge('Disp: '+ev.disposicion_1_5+'/5','bb'):''}
+                  ${ev.puntualidad_1_5?badge('Punt: '+ev.puntualidad_1_5+'/5','bp'):''}
+                </div>
+              </div>
+              ${ev.reconocimientos?`<div style="margin-top:8px"><div style="font-size:10px;font-weight:700;color:var(--green);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px">Reconocimientos</div><div style="font-size:12px;color:var(--text)">${ev.reconocimientos}</div></div>`:''}
+              ${ev.conflictos?`<div style="margin-top:8px"><div style="font-size:10px;font-weight:700;color:var(--rose);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px">Conflictos</div><div style="font-size:12px;color:var(--text)">${ev.conflictos}</div></div>`:''}
+              ${ev.plan_accion||ev.comentarios_lider?`<div style="margin-top:8px"><div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px">Comentarios & Plan</div><div style="font-size:12px;color:var(--text)">${ev.plan_accion||ev.comentarios_lider}</div></div>`:''}
+            </div>
+          `).join('') : '<div class="empty"><span class="empty-icon">📋</span>Sin evaluaciones registradas</div>'}
+        </div>
+      `;
+    }
+
+    case 'alertas': {
+      const misAlertas = (DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(empId)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+      const misPlanes  = (DATA.planes||[]).filter(p=>String(p.empleado_id)===String(empId));
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Alertas (${misAlertas.length} total · ${misAlertas.filter(a=>a.estado==='abierta').length} abiertas)</div>
+          ${misAlertas.length ? misAlertas.map(a=>{
+            const col = a.nivel==='rojo'?'var(--rose)':a.nivel==='amarillo'?'var(--amber)':'var(--green)';
+            return `<div class="alerta-card" style="border-color:${col}">
+              <div style="font-size:20px">${a.nivel==='rojo'?'🔴':a.nivel==='amarillo'?'🟡':'🟢'}</div>
+              <div class="alerta-body">
+                <div class="alerta-top">
+                  <span style="font-size:12px;font-weight:700;color:${col}">${a.nivel?.toUpperCase()}</span>
+                  ${badge(a.estado||'—', a.estado==='cerrada'?'bg':'ba')}
+                </div>
+                <div class="alerta-rule">${a.regla_disparada||'—'}</div>
+                <div style="font-size:11px;color:var(--text3)">${fmtDate(a.fecha)} · Responsable: ${a.responsable||'—'}</div>
+                ${a.accion_tomada?`<div class="alerta-accion">↳ Acción: ${a.accion_tomada}</div>`:''}
+                ${a.observaciones?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${a.observaciones}</div>`:''}
+                ${a.fecha_cierre?`<div style="font-size:11px;color:var(--green);margin-top:4px">✓ Cerrada: ${fmtDate(a.fecha_cierre)}</div>`:''}
+              </div>
+            </div>`;
+          }).join('') : '<div class="empty"><span class="empty-icon">✅</span>Sin alertas registradas</div>'}
+        </div>
+        <div class="exp-section">
+          <div class="exp-section-title">Planes de Acción (${misPlanes.length})</div>
+          ${misPlanes.length ? misPlanes.map(p=>{
+            const pct=num(p.avance_pct)||0;
+            const col=pct>=80?'var(--green)':pct>=40?'var(--amber)':'var(--rose)';
+            return `<div class="plan-card">
+              <div class="plan-header">
+                <div class="plan-obj">${p.objetivo_smart||'—'}</div>
+                <span style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:${col};flex-shrink:0">${pct}%</span>
+              </div>
+              <div class="plan-prog-wrap">
+                <div class="plan-prog-bar"><div class="plan-prog-fill" style="width:${pct}%;background:${col}"></div></div>
+              </div>
+              <div class="plan-meta">
+                ${p.inicio?`<div class="plan-meta-item"><strong>Inicio:</strong> ${fmtDate(p.inicio)}</div>`:''}
+                ${p.fin?`<div class="plan-meta-item"><strong>Fin:</strong> ${fmtDate(p.fin)}</div>`:''}
+                ${p.responsable?`<div class="plan-meta-item"><strong>Responsable:</strong> ${p.responsable}</div>`:''}
+                ${p.resultado?`<div class="plan-meta-item"><strong>Resultado:</strong> ${p.resultado}</div>`:''}
+              </div>
+              ${p.acciones_clave?`<div style="margin-top:8px;font-size:12px;color:var(--text2)"><strong style="color:var(--text3)">Acciones:</strong> ${p.acciones_clave}</div>`:''}
+              ${p.observaciones?`<div style="margin-top:6px;font-size:12px;color:var(--text2);font-style:italic">${p.observaciones}</div>`:''}
+              ${p.evidencia_url?`<div style="margin-top:8px"><a href="${p.evidencia_url}" target="_blank" style="color:var(--blue);font-size:12px">Ver evidencia →</a></div>`:''}
+            </div>`;
+          }).join('') : '<div class="empty"><span class="empty-icon">🎯</span>Sin planes de acción</div>'}
+        </div>
+      `;
+    }
+
+    case 'psico': {
+      const misPsico = (DATA.rrhh||[]).filter(r=>String(r.empleado_id)===String(empId)).sort((a,b)=>new Date(b.fecha_registro)-new Date(a.fecha_registro));
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Registros Psicométricos (${misPsico.length})</div>
+          ${misPsico.length ? misPsico.map(r=>`
+            <div class="psico-row">
+              <div class="psico-top">
+                <div>
+                  <div class="psico-tipo">${r.tipo_psicometrico||'—'}</div>
+                  <div class="psico-meta">${fmtDate(r.fecha_registro)} · Tipo de intervención: ${r.tipo_intervencion||'—'}</div>
+                </div>
+                <div style="text-align:right">
+                  ${r.puntaje?`<div class="psico-puntaje" style="color:var(--blue)">${r.puntaje}</div><div style="font-size:10px;color:var(--text3)">pts ${r.percentil?'· Perc. '+r.percentil:''}</div>`:''}
+                </div>
+              </div>
+              ${r.interpretacion?`<div class="psico-interp">${r.interpretacion}</div>`:''}
+              ${r.evento_emocional?`<div style="margin-top:6px"><span style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.8px">Evento: </span><span style="font-size:12px;color:var(--text)">${r.evento_emocional}</span></div>`:''}
+              ${r.derivacion_externa?`<div style="margin-top:4px">${badge('Derivación externa: '+r.derivacion_externa,'br')}</div>`:''}
+              ${r.resultado?`<div style="margin-top:6px"><span style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px">Resultado: </span><span style="font-size:12px;color:var(--text)">${r.resultado}</span></div>`:''}
+              ${r.seguimiento?`<div style="margin-top:4px;font-size:12px;color:var(--text2);font-style:italic">Seguimiento: ${r.seguimiento}</div>`:''}
+              ${r.prox_revision?`<div style="margin-top:4px;font-size:11px;color:var(--teal)">📅 Próxima revisión: ${fmtDate(r.prox_revision)}</div>`:''}
+            </div>
+          `).join('') : '<div class="empty"><span class="empty-icon">🧪</span>Sin registros psicométricos</div>'}
+        </div>
+      `;
+    }
+
+    case 'timeline': {
+      const events = buildTimeline(empId);
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Línea de Tiempo Completa (${events.length} eventos)</div>
+          ${events.length ? `<div class="timeline">${events.map(ev=>`
+            <div class="tl-item">
+              <div class="tl-dot" style="background:${ev.color}"></div>
+              <div class="tl-date">${fmtDate(ev.fecha)} · ${ev.tipo}</div>
+              <div class="tl-title">${ev.titulo}</div>
+              ${ev.detalle?`<div class="tl-text">${ev.detalle}</div>`:''}
+            </div>
+          `).join('')}</div>` : '<div class="empty"><span class="empty-icon">📅</span>Sin eventos registrados</div>'}
+        </div>
+      `;
+    }
+
+    case 'notas': {
+      const notas = EXP_NOTAS[empId]||[];
+      return `
+        <div class="exp-section">
+          <div class="exp-section-title">Notas Internas (${notas.length}) — Solo visible para RRHH y Líder</div>
+          <div id="exp-notas-list">
+            ${notas.length ? [...notas].reverse().map((n,i)=>`
+              <div class="nota-card">
+                <div class="nota-header">
+                  <span class="nota-autor">✏️ ${n.autor} (${n.rol})</span>
+                  <span class="nota-fecha">${n.fecha}</span>
+                </div>
+                <div class="nota-text">${n.texto}</div>
+              </div>
+            `).join('') : '<div class="empty" style="padding:20px"><span class="empty-icon">🗒️</span>Sin notas aún</div>'}
+          </div>
+          <div class="nota-form">
+            <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;letter-spacing:.5px">AGREGAR NOTA</div>
+            <textarea class="nota-textarea" id="nota-input" placeholder="Escribe una nota interna sobre este colaborador..."></textarea>
+            <button class="nota-submit" onclick="agregarNota(${empId})">Guardar nota</button>
+          </div>
+        </div>
+      `;
+    }
+
+    default: return '';
+  }
+}
+
+function ef(label, val) {
+  return `<div class="exp-field"><div class="exp-field-label">${label}</div><div class="exp-field-val">${val||'—'}</div></div>`;
+}
+
+function buildTimeline(empId) {
+  const events = [];
+  // Check-ins
+  allCheckins(empId).forEach(c=>{
+    const w=num(c.who5_pct_0_100);
+    events.push({fecha:c.fecha_envio,tipo:'Check-in',color:W.color(w),titulo:`WHO-5: ${w}% · Clima: ${num(c.indice_clima_0_100)}%`,detalle:c.texto_motivo?`Me motivó: ${c.texto_motivo}`:''});
+  });
+  // Alertas
+  (DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(empId)).forEach(a=>{
+    const col=a.nivel==='rojo'?'var(--rose)':a.nivel==='amarillo'?'var(--amber)':'var(--green)';
+    events.push({fecha:a.fecha,tipo:'Alerta',color:col,titulo:`Alerta ${a.nivel}: ${a.regla_disparada}`,detalle:a.accion_tomada?`Acción: ${a.accion_tomada}`:''});
+  });
+  // Evaluaciones
+  (DATA.lideres||[]).filter(e=>String(e.empleado_id)===String(empId)).forEach(e=>{
+    events.push({fecha:e.fecha_respuesta,tipo:'Evaluación Líder',color:'var(--blue)',titulo:`Cumplimiento: ${e.cumpl_objetivo_pct||'—'}% · ${sem(num(e.semaforo_objetivo))}`,detalle:e.comentarios_lider||''});
+  });
+  // Planes
+  (DATA.planes||[]).filter(p=>String(p.empleado_id)===String(empId)).forEach(p=>{
+    if(p.inicio) events.push({fecha:p.inicio,tipo:'Plan de Acción',color:'var(--purple)',titulo:`Inicio: ${p.objetivo_smart?.slice(0,60)||'—'}`,detalle:''});
+    if(p.fin) events.push({fecha:p.fin,tipo:'Fin de Plan',color:num(p.avance_pct)>=80?'var(--green)':'var(--amber)',titulo:`Cierre: ${num(p.avance_pct)}% de avance`,detalle:p.resultado||''});
+  });
+  // Notas
+  (EXP_NOTAS[empId]||[]).forEach(n=>{
+    events.push({fecha:n.fecha,tipo:'Nota interna',color:'var(--teal)',titulo:`Nota de ${n.autor}`,detalle:n.texto.slice(0,100)+(n.texto.length>100?'...':'')});
+  });
+  return events.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+}
+
+function buildResumenIA(emp, hist, lc) {
+  if(!lc) return '';
+  const w = num(lc.who5_pct_0_100);
+  const estres = num(lc.estres_1_5);
+  const pertenencia = num(lc.pertenencia_1_5);
+  const alertasAbiertas = (DATA.alertas||[]).filter(a=>String(a.empleado_id)===String(emp.empleado_id)&&a.estado==='abierta').length;
+  const tendencia = hist.length>=2 ? num(hist[hist.length-1].who5_pct_0_100)-num(hist[0].who5_pct_0_100) : 0;
+
+  let resumen = `<strong>${emp.nombre}</strong> ${emp.apellido_paterno||''} registra un WHO-5 de <strong>${w}%</strong> (${W.text(w)}) `;
+  resumen += tendencia>10 ? `con una tendencia positiva de +${Math.round(tendencia)} pts. ` : tendencia<-10 ? `con una tendencia a la baja de ${Math.round(tendencia)} pts que requiere atención. ` : `con estabilidad en los últimos registros. `;
+  if(estres>=4) resumen += `Presenta niveles de estrés elevados (${estres}/5). `;
+  if(pertenencia<=2) resumen += `El sentido de pertenencia es bajo (${pertenencia}/5). `;
+  if(alertasAbiertas>0) resumen += `Tiene <strong>${alertasAbiertas} alerta${alertasAbiertas>1?'s':''} abierta${alertasAbiertas>1?'s':''}</strong> pendiente${alertasAbiertas>1?'s':''} de seguimiento. `;
+  resumen += hist.length>=5 ? `Con ${hist.length} check-ins registrados, existe suficiente historial para identificar patrones.` : `Con ${hist.length} check-in${hist.length>1?'s':''}, el historial aún es limitado.`;
+
+  return `<div class="exp-section">
+    <div class="exp-section-title">Resumen Ejecutivo</div>
+    <div class="resumen-ia">
+      <div class="resumen-ia-header">🧠 Generado automáticamente</div>
+      ${resumen}
+    </div>
+  </div>`;
+}
+
+function agregarNota(empId) {
+  const input = document.getElementById('nota-input');
+  const texto = (input?.value||'').trim();
+  if(!texto) { toast('⚠️ Escribe algo antes de guardar'); return; }
+
+  if(!EXP_NOTAS[empId]) EXP_NOTAS[empId]=[];
+  const nota = {
+    autor: USER.name,
+    rol: ROLE,
+    fecha: new Date().toLocaleString('es-MX'),
+    texto,
+  };
+  EXP_NOTAS[empId].push(nota);
+
+  try { localStorage.setItem('exp_notas_'+empId, JSON.stringify(EXP_NOTAS[empId])); } catch(e){}
+
+  input.value='';
+  // Re-render notas list
+  const list = document.getElementById('exp-notas-list');
+  if(list) {
+    list.innerHTML=[...EXP_NOTAS[empId]].reverse().map(n=>`
+      <div class="nota-card">
+        <div class="nota-header">
+          <span class="nota-autor">✏️ ${n.autor} (${n.rol})</span>
+          <span class="nota-fecha">${n.fecha}</span>
+        </div>
+        <div class="nota-text">${n.texto}</div>
+      </div>
+    `).join('');
+  }
+  toast('✅ Nota guardada');
+}
+
+function renderExpBienestarChart(empId) {
+  const canvas = document.getElementById('exp-who5-chart');
+  if(!canvas) return;
+  const hist = allCheckins(empId);
+  killChart('exp-who5');
+  CHARTS['exp-who5'] = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{
+      labels: hist.map(c=>fmtDate(c.fecha_envio)),
+      datasets:[
+        {label:'WHO-5',data:hist.map(c=>num(c.who5_pct_0_100)),borderColor:'#5B8EF0',backgroundColor:'rgba(91,142,240,0.08)',borderWidth:2.5,pointRadius:4,fill:true,tension:.4},
+        {label:'Clima',data:hist.map(c=>num(c.indice_clima_0_100)),borderColor:'#00D4C8',backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:.4},
+      ]
+    },
+    options:{...chartDefaults,
+      scales:{
+        y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4A5268',font:{size:9}}},
+        x:{grid:{display:false},ticks:{color:'#4A5268',font:{size:9},maxRotation:45}}
+      }
+    }
+  });
+}
+
+// Keyboard close
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeExpediente(); });
+</script>
 </body>
-</html>
