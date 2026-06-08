@@ -855,11 +855,23 @@ async function fetchSheetFrom(sheetId, tab) {
   const r=await fetch(url); if(!r.ok) throw new Error(r.status);
   const j=await r.json(); const rows=j.values||[];
   if(rows.length<2) return [];
-  // Skip title row if first cell has emoji
-  let startRow = 0;
-  if(rows[0] && rows[0][0] && /^[📊💰🎯⚙️📋]/.test(String(rows[0][0]))) startRow = 1;
-  const h=rows[startRow];
-  return rows.slice(startRow+1).map(row=>{ const o={}; h.forEach((k,i)=>o[k]=row[i]??''); return o; });
+  // Find the actual header row — first row where first cell is a short non-emoji string
+  let headerRow = 0;
+  for(let i=0;i<Math.min(rows.length,4);i++){
+    const cell = String(rows[i][0]||'');
+    // Header rows have short text without emojis at the start
+    if(cell && cell.length < 40 && !/^[📊💰🎯⚙️📋🔴🟡🟢✅]/.test(cell)) {
+      headerRow = i;
+      break;
+    }
+    // If first cell has emoji/title text, next row might be headers
+    headerRow = i+1;
+  }
+  if(headerRow >= rows.length) return [];
+  const h=rows[headerRow];
+  return rows.slice(headerRow+1)
+    .filter(row=>row.some(v=>v!=null&&v!==''))
+    .map(row=>{ const o={}; h.forEach((k,i)=>o[String(k||'').trim()]=row[i]??''); return o; });
 }
 
 async function loadData() {
