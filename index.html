@@ -1683,8 +1683,7 @@ function renderRendicionInsights(data, dataInd, sucursales, logrados, avgDevol, 
   if(pctMeta>0) ins.push({icon:'💰',title:`${Math.round(pctMeta*100)}% de meta mensual acumulada`,text:`${fmtPeso(totalVenta)} en ventas esta semana. Meta mensual: ${fmtPeso(metaTotal)}.`,bg:pctMeta>=0.25?'var(--blue-l)':'var(--amber-l)',color:pctMeta>=0.25?'var(--blue)':'var(--amber)'});
 
   const peticiones = data.filter(r=>r['Petición a Dirección']&&r['Petición a Dirección'].trim()&&r['Petición a Dirección']!=='None');
-  if(peticiones.length>0) ins.push({icon:'📋',title:`${peticiones.length} petición${peticiones.length>1?'es':''} a Dirección`,text:peticiones.map(r=>`• ${r['Sucursal']}: ${r['Petición a Dirección']}`).join('
-'),bg:'var(--purple-l)',color:'var(--purple)'});
+  if(peticiones.length>0) ins.push({icon:'📋',title:peticiones.length+' petición'+(peticiones.length>1?'es':'')+' a Dirección',text:peticiones.map(r=>'• '+r['Sucursal']+': '+r['Petición a Dirección']).join(' | '),bg:'var(--purple-l)',color:'var(--purple)'});
 
   el.innerHTML = ins.length ? ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
     <div class="insight-icon">${i.icon}</div>
