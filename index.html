@@ -659,10 +659,19 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="topbar">
         <div><div class="page-title">Rendición de Cuentas</div><div class="page-sub" id="rend-sub">HOLLMAN Track — Seguimiento semanal por sucursal</div></div>
         <div class="topbar-actions">
-          <select id="rend-semana-filter" onchange="renderRendicion()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none">
-            <option value="">Todas las semanas</option>
-          </select>
-          <button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <select id="rend-semana-filter" onchange="renderRendicion()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none">
+              <option value="">Todas las semanas</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--text2)">Desde</span>
+              <input type="date" id="rend-fecha-desde" onchange="renderRendicion()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 10px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;outline:none">
+              <span style="font-size:12px;color:var(--text2)">Hasta</span>
+              <input type="date" id="rend-fecha-hasta" onchange="renderRendicion()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 10px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;outline:none">
+              <button onclick="document.getElementById('rend-fecha-desde').value='';document.getElementById('rend-fecha-hasta').value='';renderRendicion()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:4px 8px;border-radius:var(--r-xs)" title="Limpiar fechas">✕ Limpiar</button>
+            </div>
+            <button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button>
+          </div>
         </div>
       </div>
 
@@ -681,8 +690,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <div class="tbl-wrap">
             <table>
               <thead><tr>
-                <th>Sucursal / Gerente</th><th>Semana</th><th>Objetivo</th><th>¿Se logró?</th>
-                <th>Venta</th><th>% Devol.</th><th>Ticket Prom.</th><th>Acciones</th>
+                <th>Sucursal / Gerente</th><th>Semana</th><th>Venta vs Meta</th>
+                <th>¿Se logró?</th><th>Devoluciones</th><th>Ticket Prom.</th><th></th>
               </tr></thead>
               <tbody id="rend-tabla"></tbody>
             </table>
@@ -911,7 +920,20 @@ function renderAll() { renderMi(); if(ROLE==='lider'||ROLE==='rrhh') { renderEqu
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
-const num = v => isNaN(parseFloat(v))?0:parseFloat(v);
+const num = v => {
+  if(v===null||v===undefined||v==='') return 0;
+  const s = String(v).replace(/[$,\s]/g,'').replace('%','');
+  const n = parseFloat(s);
+  return isNaN(n)?0:n;
+};
+const numPct = v => {
+  // handles "3.4%", "0.034", "3.4"
+  const s = String(v||'').trim();
+  if(s.endsWith('%')) return parseFloat(s)/100;
+  const n = parseFloat(s);
+  if(isNaN(n)) return 0;
+  return n > 1 ? n/100 : n;
+};
 const avg = arr => { const a=arr.filter(v=>v!=null&&!isNaN(v)); return a.length?Math.round(a.reduce((x,y)=>+x+ +y,0)/a.length):0; };
 const fmtDate = d => {
   if(!d) return '—';
@@ -1484,211 +1506,278 @@ function renderRendicion() {
   const ind  = DATA.hollmanInd  || [];
   const obj  = DATA.hollmanObjAdicionales || DATA.hollmanObj || [];
 
-  console.log('renderRendicion base:', base.length, 'ind:', ind.length);
-
   const tablaEl = document.getElementById('rend-tabla');
   if(!tablaEl) return;
 
-  if(!base.length) {
-    tablaEl.innerHTML='<tr><td colspan="8" class="empty"><span class="empty-icon">📊</span>Sin datos — intenta Actualizar</td></tr>';
+  if(!base.length && !ind.length) {
+    tablaEl.innerHTML='<tr><td colspan="9" class="empty"><span class="empty-icon">📊</span>Sin datos — presiona Actualizar</td></tr>';
+    loadData().then(()=>{ if((DATA.hollmanInd||[]).length) renderRendicion(); });
     return;
   }
 
-  // Filter by gerente if lider
-  const myName = (USER?.name||'').toLowerCase().trim();
   const filterByGerente = ROLE==='lider';
-  const filteredBase = filterByGerente ? base.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName.split(' ')[0])) : base;
-  const filteredInd  = filterByGerente ? ind.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName.split(' ')[0])) : ind;
+  const myName = (USER?.name||'').toLowerCase().trim().split(' ')[0];
+  const filteredInd  = filterByGerente ? ind.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName)) : ind;
+  const filteredBase = filterByGerente ? base.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName)) : base;
 
-  // Populate semana filter
-  const semanas = [...new Set(filteredBase.map(r=>r['Semana']).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+  // ── Semana filter ──
+  const semanas = [...new Set(filteredInd.map(r=>r['Semana']).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
   const selEl = document.getElementById('rend-semana-filter');
   if(selEl) {
-    const currentVal = selEl.value;
+    const cv = selEl.value;
     selEl.innerHTML = '<option value="">Todas las semanas</option>' +
-      semanas.map(s=>`<option value="${s}" ${s==currentVal?'selected':''}>${'Semana '+Math.round(Number(s))}</option>`).join('');
+      semanas.map(s=>`<option value="${s}" ${s==cv?'selected':''}>Semana ${s} · ${filteredInd.find(r=>r['Semana']===s)?.['Mes']||''} ${filteredInd.find(r=>r['Semana']===s)?.['Año']||''}</option>`).join('');
   }
 
-  const semFilt = selEl?.value||'';
-  const data    = semFilt ? filteredBase.filter(r=>String(r['Semana'])===semFilt) : filteredBase;
-  const dataInd = semFilt ? filteredInd.filter(r=>String(r['Semana'])===semFilt)  : filteredInd;
+  // ── Date range filter ──
+  const fechaDesde = document.getElementById('rend-fecha-desde')?.value;
+  const fechaHasta = document.getElementById('rend-fecha-hasta')?.value;
 
-  // KPIs
-  const sucursales = [...new Set(data.map(r=>r['Sucursal']).filter(Boolean))];
+  const semFilt = selEl?.value||'';
+  let dataInd  = semFilt ? filteredInd.filter(r=>String(r['Semana'])===semFilt)  : filteredInd;
+  let dataBase = semFilt ? filteredBase.filter(r=>String(r['Semana'])===semFilt) : filteredBase;
+
+  // Apply date range filter using Año+Semana approximate
+  if(fechaDesde||fechaHasta) {
+    const semanaToApproxDate = (año, semana) => {
+      const jan1 = new Date(Number(año), 0, 1);
+      return new Date(jan1.getTime() + (Number(semana)-1)*7*24*3600*1000);
+    };
+    dataInd = dataInd.filter(r=>{
+      const d = semanaToApproxDate(r['Año']||2026, r['Semana']||1);
+      if(fechaDesde && d < new Date(fechaDesde)) return false;
+      if(fechaHasta && d > new Date(fechaHasta)) return false;
+      return true;
+    });
+    dataBase = dataBase.filter(r=>{
+      const d = semanaToApproxDate(r['Año']||2026, r['Semana']||1);
+      if(fechaDesde && d < new Date(fechaDesde)) return false;
+      if(fechaHasta && d > new Date(fechaHasta)) return false;
+      return true;
+    });
+  }
+
+  // ── KPIs ──
+  const sucursales = [...new Set(dataInd.map(r=>r['Sucursal']).filter(Boolean))];
   const totalVenta = dataInd.reduce((a,r)=>a+num(r['Venta Semana']),0);
   const metaTotal  = dataInd.reduce((a,r)=>a+num(r['Meta Mensual']),0);
-  const logrados   = data.filter(r=>(r['¿Se Logró?']||'').toLowerCase()==='sí'||(r['¿Se Logró?']||'').toLowerCase()==='si').length;
-  const avgDevol   = dataInd.length ? dataInd.reduce((a,r)=>a+num(r['% Devol.']),0)/dataInd.length : 0;
+  const logrados   = dataBase.filter(r=>{const v=(r['¿Se Logró?']||'').toLowerCase();return v==='sí'||v==='si';}).length;
+  const avgDevol   = dataInd.length ? dataInd.reduce((a,r)=>a+numPct(r['% Devol.']),0)/dataInd.length : 0;
+  const totalDevol = dataInd.reduce((a,r)=>a+num(r['Monto Devol.']),0);
 
-  const kSuc = document.getElementById('rend-k-suc');
-  const kVenta = document.getElementById('rend-k-venta');
-  const kVentaSub = document.getElementById('rend-k-venta-sub');
-  const kObj = document.getElementById('rend-k-obj');
-  const kDevol = document.getElementById('rend-k-devol');
-  const kDevolEstado = document.getElementById('rend-k-devol-estado');
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
+  set('rend-k-suc', sucursales.length);
+  set('rend-k-venta', fmtPeso(totalVenta));
+  set('rend-k-venta-sub', metaTotal ? Math.round((totalVenta/metaTotal)*100)+'% de meta mensual' : '—');
+  set('rend-k-obj', logrados+'/'+dataBase.length);
+  set('rend-k-devol', (avgDevol*100).toFixed(1)+'%');
+  set('rend-k-devol-estado', avgDevol<0.05?badge('Óptimo','bg'):avgDevol<0.10?badge('Preventivo','ba'):badge('Crítico','br'));
 
-  if(kSuc) kSuc.textContent = sucursales.length;
-  if(kVenta) kVenta.textContent = fmtPeso(totalVenta);
-  if(kVentaSub) kVentaSub.textContent = metaTotal ? Math.round((totalVenta/metaTotal)*100)+'% de meta mensual' : '—';
-  if(kObj) kObj.textContent = logrados+'/'+data.length;
-  if(kDevol) kDevol.textContent = (avgDevol*100).toFixed(1)+'%';
-  if(kDevolEstado) kDevolEstado.innerHTML = avgDevol<0.05?badge('Óptimo','bg'):avgDevol<0.10?badge('Preventivo','ba'):badge('Crítico','br');
-
-  // Tabla
-  tablaEl.innerHTML = data.map(r => {
-    const id = r['ID']||'';
-    const indRow = ind.find(i=>i['ID']===id)||{};
-    const logro = (r['¿Se Logró?']||'').toLowerCase();
-    const logroBadge = (logro==='sí'||logro==='si') ? badge('✓ Sí','bg') : logro==='no' ? badge('✗ No','br') : badge(r['¿Se Logró?']||'—','ba');
-    const devol = num(indRow['% Devol.']);
+  // ── Tabla ──
+  tablaEl.innerHTML = dataInd.map(r => {
+    const bRow = dataBase.find(b=>b['ID']===r['ID'])||{};
+    const logro = (bRow['¿Se Logró?']||'').toLowerCase();
+    const logroBadge = (logro==='sí'||logro==='si')?badge('✓ Sí','bg'):logro==='no'?badge('✗ No','br'):bRow['¿Se Logró?']?badge(bRow['¿Se Logró?'],'ba'):'<span style="color:var(--text3)">—</span>';
+    const devol = numPct(r['% Devol.']);
     const devolColor = devol<0.05?'var(--green)':devol<0.10?'var(--amber)':'var(--rose)';
-    const semana = r['Semana'] ? 'Sem. '+Math.round(Number(r['Semana'])) : '—';
-    const objetivo = (r['Objetivo Ant.']||'—');
-    return `<tr class="exp-row" style="cursor:pointer" data-rendid="${id}" title="Ver detalle">
-      <td><div style="font-weight:700;font-size:13px">${r['Sucursal']||'—'}</div><div style="color:var(--text3);font-size:11px">${r['Gerente']||'—'}</div></td>
-      <td style="color:var(--text2);font-size:12px;white-space:nowrap">${semana}<br>${r['Mes']||''} ${r['Año']||''}</td>
-      <td style="color:var(--text2);font-size:12px;max-width:160px">${objetivo.length>50?objetivo.slice(0,50)+'...':objetivo}</td>
+    const semDevol = r['Sem. Devol.']||'';
+    const semDevColor = semDevol.includes('ÓPTIMO')?'var(--green)':semDevol.includes('CRÍTICO')?'var(--rose)':'var(--amber)';
+    const venta = num(r['Venta Semana']);
+    const meta  = num(r['Meta Mensual']);
+    const pctMeta = meta>0 ? Math.round((venta/meta)*100) : 0;
+    return `<tr class="rend-row" data-rendid="${r['ID']}" style="cursor:pointer" title="Ver detalle completo">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🏪</div>
+          <div>
+            <div style="font-weight:700;font-size:13px">${r['Sucursal']||'—'}</div>
+            <div style="color:var(--text3);font-size:11px">${r['Gerente']||'—'}</div>
+          </div>
+        </div>
+      </td>
+      <td style="white-space:nowrap"><div style="font-weight:600;font-size:13px">Sem. ${r['Semana']||'—'}</div><div style="color:var(--text3);font-size:11px">${r['Mes']||''} ${r['Año']||''}</div></td>
+      <td>
+        <div style="font-weight:800;font-size:15px;color:var(--green)">${r['Venta Semana']||'—'}</div>
+        ${meta>0?`<div style="margin-top:4px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctMeta,100)}%;background:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--amber)':'var(--rose)'}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">${pctMeta}% de ${r['Meta Mensual']}</div></div>`:''}
+      </td>
       <td>${logroBadge}</td>
-      <td style="font-weight:700;color:var(--green)">${fmtPeso(num(indRow['Venta Semana']))}</td>
-      <td style="font-weight:700;color:${devolColor}">${devol?(devol*100).toFixed(1)+'%':'—'}</td>
-      <td style="color:var(--text2)">${indRow['Ticket Promedio']?'$'+Math.round(num(indRow['Ticket Promedio'])).toLocaleString('es-MX'):'—'}</td>
-      <td><span style="color:var(--blue);font-size:12px;font-weight:600">Ver →</span></td>
+      <td>
+        <div style="font-weight:700;color:${devolColor}">${r['% Devol.']||'—'}</div>
+        <div style="font-size:11px;color:${semDevColor}">${semDevol.replace(/🔴|🟡|🟢/g,'').trim()}</div>
+      </td>
+      <td style="font-weight:700;color:var(--teal)">${r['Ticket Promedio']||'—'}</td>
+      <td><span style="color:var(--blue);font-size:12px;font-weight:600">Ver detalle →</span></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="empty">Sin rendiciones para este período</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="empty">Sin rendiciones para este período</td></tr>';
 
-  // Attach click events for rendicion rows
+  // Attach click
   setTimeout(()=>{
-    document.querySelectorAll('tr[data-rendid]').forEach(row=>{
+    document.querySelectorAll('tr.rend-row').forEach(row=>{
       row.onclick = ()=>showRendicionDetalle(row.getAttribute('data-rendid'));
     });
-  },100);
+  },50);
 
-  // Bar chart
-  const sucVentas = sucursales.map(suc=>{
-    const sucInd = dataInd.filter(r=>r['Sucursal']===suc);
-    return {suc, venta:sucInd.reduce((a,r)=>a+num(r['Venta Semana']),0)};
-  });
+  // ── Bar chart ──
   const chartEl = document.getElementById('rend-bar-chart');
-  if(chartEl) {
+  if(chartEl && sucursales.length) {
+    const sucData = sucursales.map(suc=>{
+      const rows = dataInd.filter(r=>r['Sucursal']===suc);
+      const venta = rows.reduce((a,r)=>a+num(r['Venta Semana']),0);
+      const meta  = rows.reduce((a,r)=>a+num(r['Meta Mensual']),0);
+      const devol = rows.length ? rows.reduce((a,r)=>a+numPct(r['% Devol.']),0)/rows.length : 0;
+      return {suc, venta, meta, devol};
+    });
     killChart('rend-bar');
     CHARTS['rend-bar'] = new Chart(chartEl.getContext('2d'),{
       type:'bar',
       data:{
-        labels:sucVentas.map(s=>s.suc),
-        datasets:[{label:'Venta',data:sucVentas.map(s=>s.venta),backgroundColor:'rgba(91,142,240,0.7)',borderRadius:6,borderSkipped:false}]
+        labels:sucData.map(s=>s.suc),
+        datasets:[
+          {label:'Venta',data:sucData.map(s=>s.venta),backgroundColor:sucData.map(s=>s.venta>=(s.meta*0.9)?'rgba(34,212,114,0.75)':s.venta>=(s.meta*0.7)?'rgba(245,183,49,0.75)':'rgba(240,91,122,0.75)'),borderRadius:8,borderSkipped:false},
+          {label:'Meta',data:sucData.map(s=>s.meta),backgroundColor:'transparent',borderColor:'rgba(255,255,255,0.2)',borderWidth:2,type:'line',pointRadius:4,pointBackgroundColor:'rgba(255,255,255,0.4)'}
+        ]
       },
       options:{...chartDefaults,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'  '+fmtPeso(c.raw)}}},
+        plugins:{legend:{position:'top',labels:{color:'#8B95B0',font:{size:11},boxWidth:10,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>'  '+fmtPeso(c.raw)}}},
         scales:{
           y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4A5268',font:{size:9},callback:v=>fmtPeso(v)}},
-          x:{grid:{display:false},ticks:{color:'#4A5268',font:{size:10}}}
+          x:{grid:{display:false},ticks:{color:'#8B95B0',font:{size:11}}}
         }
       }
     });
   }
 
-  // Objetivos adicionales
+  // ── Objetivos adicionales ──
   const objFilt = semFilt ? obj.filter(o=>String(o['Semana'])===semFilt) : obj;
-  const objFiltered = filterByGerente ? objFilt.filter(o=>(o['Gerente']||'').toLowerCase().includes(myName.split(' ')[0])) : objFilt;
+  const objShow = filterByGerente ? objFilt.filter(o=>(o['Gerente']||'').toLowerCase().includes(myName)) : objFilt;
   const objEl = document.getElementById('rend-obj-adicionales');
   if(objEl) {
-    objEl.innerHTML = objFiltered.length ? objFiltered.map(o=>{
+    objEl.innerHTML = objShow.length ? objShow.map(o=>{
       const estado = (o['Estado']||'').toLowerCase();
       const cls = (estado.includes('cumplido')&&!estado.includes('no'))?'bg':estado.includes('proceso')?'ba':'br';
       return `<div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-weight:700;font-size:13px">${o['Sucursal']||'—'}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:700;font-size:13px">${o['Sucursal']||'—'} <span style="color:var(--text3);font-weight:400;font-size:11px">· ${o['Gerente']||''}</span></div>
           ${badge(o['Estado']||'—',cls)}
         </div>
-        <div style="font-size:13px;color:var(--text)">${o['Objetivo Adicional']||'—'}</div>
-        ${o['Comentario / Evidencia']?`<div style="font-size:12px;color:var(--text2);margin-top:4px;font-style:italic">${o['Comentario / Evidencia']}</div>`:''}
-        <div style="font-size:11px;color:var(--text3);margin-top:6px">${o['Gerente']||''} · Sem. ${o['Semana']||''}</div>
+        <div style="font-size:13px;color:var(--text);margin-bottom:6px">${o['Objetivo Adicional']||'—'}</div>
+        ${o['Comentario / Evidencia']?`<div style="font-size:12px;color:var(--text2);font-style:italic;padding:8px;background:var(--surface);border-radius:var(--r-xs)">"${o['Comentario / Evidencia']}"</div>`:''}
+        <div style="font-size:10px;color:var(--text3);margin-top:6px">Sem. ${o['Semana']||'—'}</div>
       </div>`;
     }).join('') : '<div class="empty"><span class="empty-icon">🎯</span>Sin objetivos adicionales</div>';
   }
 
-  renderRendicionInsights(data, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal);
+  renderRendicionInsights(dataBase, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal);
 }
 
 function showRendicionDetalle(id) {
-  const base = (DATA.hollmanBase||[]).find(r=>r['ID']===id);
-  const indRow = (DATA.hollmanInd||[]).find(r=>r['ID']===id);
-  if(!base) return;
-  const devol = num(indRow?.['% Devol.']||0);
+  const r    = (DATA.hollmanInd ||[]).find(x=>x['ID']===id);
+  const base = (DATA.hollmanBase||[]).find(x=>x['ID']===id);
+  if(!r) return;
+  const devol = numPct(r['% Devol.']);
   const devolColor = devol<0.05?'var(--green)':devol<0.10?'var(--amber)':'var(--rose)';
+  const venta = num(r['Venta Semana']);
+  const meta  = num(r['Meta Mensual']);
+  const pctMeta = meta>0?Math.round((venta/meta)*100):0;
+  const semDevol = r['Sem. Devol.']||'';
+  const semColor = semDevol.includes('ÓPTIMO')?'var(--green)':semDevol.includes('CRÍTICO')?'var(--rose)':'var(--amber)';
+
   document.getElementById('rend-detalle-title').textContent =
-    `${base['Sucursal']} — ${base['Gerente']} — Semana ${Math.round(Number(base['Semana']))} ${base['Mes']||''}`;
+    `${r['Sucursal']} · ${r['Gerente']} · Semana ${r['Semana']} ${r['Mes']||''} ${r['Año']||''}`;
+
   document.getElementById('rend-detalle-content').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center">
+    <!-- Métricas principales -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Venta Semana</div>
-        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--green)">${fmtPeso(num(indRow?.['Venta Semana']||0))}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--green)">${r['Venta Semana']||'—'}</div>
+        ${meta>0?`<div style="margin-top:6px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctMeta,100)}%;background:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--amber)':'var(--rose)'}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:3px">${pctMeta}% de meta</div></div>`:''}
       </div>
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center">
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Meta Mensual</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--blue)">${r['Meta Mensual']||'—'}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">% Devoluciones</div>
-        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:${devolColor}">${(devol*100).toFixed(1)}%</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">${indRow?.['Sem. Devol.']||'—'}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:${devolColor}">${r['% Devol.']||'—'}</div>
+        <div style="font-size:11px;color:${semColor};margin-top:4px">${semDevol.replace(/🔴|🟡|🟢/g,'').trim()}</div>
       </div>
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center">
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Ticket Promedio</div>
-        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--blue)">$${Math.round(num(indRow?.['Ticket Promedio']||0)).toLocaleString('es-MX')}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--teal)">${r['Ticket Promedio']||'—'}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Monto devol: ${r['Monto Devol.']||'—'}</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${detBox('Objetivo anterior',base['Objetivo Ant.'],'var(--blue)','')}
-      ${detBox('¿Se logró?',base['¿Se Logró?'],(base['¿Se Logró?']||'').toLowerCase()==='sí'?'var(--green)':'var(--rose)','')}
-      ${detBox('Logros obtenidos',base['Logros Obtenidos'],'var(--green)','')}
-      ${detBox('Qué funcionó',base['Qué Funcionó'],'var(--teal)','')}
-      ${detBox('Qué estorbó',base['Qué Estorbó'],'var(--rose)','')}
-      ${detBox('Oportunidades',base['Oportunidades'],'var(--amber)','')}
-      ${detBox('Petición a Dirección',base['Petición a Dirección'],'var(--purple)','')}
-      ${detBox('Nueva meta',base['Nueva Meta'],'var(--blue)','')}
-      ${detBox('Acciones específicas',base['Acciones Específicas'],'var(--teal)','')}
-    </div>
-    ${base['Comentarios']?`<div style="margin-top:16px;background:var(--surface2);border-radius:var(--r-sm);padding:14px"><div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">Comentarios</div><div style="font-size:13px;color:var(--text2)">${base['Comentarios']}</div></div>`:''}
+    <!-- Campos cualitativos -->
+    ${base ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${detBox('Objetivo de la semana anterior', base['Objetivo Ant.'], 'var(--blue)')}
+      ${detBox('¿Se logró?', base['¿Se Logró?'], (base['¿Se Logró?']||'').toLowerCase()==='sí'?'var(--green)':'var(--rose)')}
+      ${detBox('Logros obtenidos', base['Logros Obtenidos'], 'var(--green)')}
+      ${detBox('¿Qué funcionó?', base['Qué Funcionó'], 'var(--teal)')}
+      ${detBox('¿Qué estorbó?', base['Qué Estorbó'], 'var(--rose)')}
+      ${detBox('Oportunidades identificadas', base['Oportunidades'], 'var(--amber)')}
+      ${detBox('Nueva meta para la semana', base['Nueva Meta'], 'var(--blue)')}
+      ${detBox('Acciones específicas', base['Acciones Específicas'], 'var(--teal)')}
+      ${detBox('Petición a Dirección', base['Petición a Dirección'], 'var(--purple)')}
+      ${detBox('Comentarios', base['Comentarios'], 'var(--text2)')}
+    </div>` : '<div class="empty">Sin datos cualitativos para esta rendición</div>'}
   `;
   const wrap = document.getElementById('rend-detalle-wrap');
   wrap.style.display='block';
-  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>wrap.scrollIntoView({behavior:'smooth',block:'start'}),50);
 }
 
-function detBox(label, val, color, sub) {
-  if(!val||val==='None'||val.trim()==='') return '';
+function detBox(label, val, color) {
+  if(!val||String(val).trim()===''||val==='None') return '';
   return `<div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border-left:3px solid ${color}">
     <div style="font-size:10px;font-weight:700;color:${color};letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">${label}</div>
-    <div style="font-size:13px;color:var(--text);line-height:1.5">${val}</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6">${val}</div>
   </div>`;
 }
 
 function fmtPeso(n) {
   if(!n||isNaN(n)) return '—';
+  if(n>=1000000) return '$'+( n/1000000).toFixed(1)+'M';
+  if(n>=1000) return '$'+Math.round(n/1000)+'K';
   return '$'+Math.round(n).toLocaleString('es-MX');
 }
 
-function renderRendicionInsights(data, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal) {
+function renderRendicionInsights(dataBase, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal) {
   const el = document.getElementById('rend-insights');
-  if(!el) return;
+  if(!el||!dataInd.length) return;
   const ins = [];
-  const pctMeta = metaTotal ? totalVenta/metaTotal : 0;
-  const pctLogrado = data.length ? logrados/data.length : 0;
+  const pctLogrado = dataBase.length ? logrados/dataBase.length : 0;
+  const pctMeta = metaTotal>0 ? totalVenta/metaTotal : 0;
 
-  if(pctLogrado>=0.8) ins.push({icon:'🏆',title:`${Math.round(pctLogrado*100)}% de objetivos logrados`,text:`${logrados} de ${data.length} sucursales cumplieron su objetivo esta semana.`,bg:'var(--green-l)',color:'var(--green)'});
-  else if(pctLogrado>=0.5) ins.push({icon:'📈',title:`${Math.round(pctLogrado*100)}% de objetivos logrados`,text:`${logrados} de ${data.length} sucursales lograron su objetivo. Hay oportunidad de mejora en ${data.length-logrados}.`,bg:'var(--amber-l)',color:'var(--amber)'});
-  else if(data.length>0) ins.push({icon:'⚠️',title:`Solo ${Math.round(pctLogrado*100)}% logró su objetivo`,text:`${data.length-logrados} sucursales no alcanzaron su meta. Revisar obstáculos reportados.`,bg:'var(--rose-l)',color:'var(--rose)'});
+  // Cumplimiento
+  if(pctLogrado>=0.8) ins.push({icon:'🏆',title:Math.round(pctLogrado*100)+'% de objetivos logrados',text:logrados+' de '+dataBase.length+' sucursales cumplieron su objetivo esta semana. ¡Excelente desempeño!',bg:'var(--green-l)',color:'var(--green)'});
+  else if(pctLogrado>=0.5) ins.push({icon:'📈',title:Math.round(pctLogrado*100)+'% de objetivos logrados',text:'Hay oportunidad de mejora en '+(dataBase.length-logrados)+' sucursal'+(dataBase.length-logrados>1?'es':'')+'.',bg:'var(--amber-l)',color:'var(--amber)'});
+  else if(dataBase.length>0) ins.push({icon:'⚠️',title:'Solo '+Math.round(pctLogrado*100)+'% logró su objetivo',text:(dataBase.length-logrados)+' sucursal'+(dataBase.length-logrados>1?'es':'')+' no alcanzaron su meta.',bg:'var(--rose-l)',color:'var(--rose)'});
 
-  if(avgDevol>0.10) ins.push({icon:'↩️',title:`Devoluciones críticas: ${(avgDevol*100).toFixed(1)}%`,text:'Por encima del umbral crítico (10%). Requiere acción inmediata.',bg:'var(--rose-l)',color:'var(--rose)'});
-  else if(avgDevol>0.05) ins.push({icon:'⚡',title:`Devoluciones en nivel preventivo: ${(avgDevol*100).toFixed(1)}%`,text:'Entre 5% y 10%. Monitorear de cerca.',bg:'var(--amber-l)',color:'var(--amber)'});
-  else if(avgDevol>0) ins.push({icon:'✅',title:`Devoluciones óptimas: ${(avgDevol*100).toFixed(1)}%`,text:'Dentro del rango óptimo (menos del 5%).',bg:'var(--green-l)',color:'var(--green)'});
+  // Devoluciones
+  const criticas = dataInd.filter(r=>(r['Sem. Devol.']||'').includes('CRÍTICO'));
+  if(criticas.length>0) ins.push({icon:'↩️',title:criticas.length+' sucursal'+(criticas.length>1?'es':'')+' en nivel crítico de devoluciones',text:'Sucursales: '+criticas.map(r=>r['Sucursal']).join(', ')+'. Requieren acción inmediata.',bg:'var(--rose-l)',color:'var(--rose)'});
+  else if(avgDevol>0.05) ins.push({icon:'⚡',title:'Devoluciones en nivel preventivo: '+(avgDevol*100).toFixed(1)+'%',text:'Monitorear de cerca para evitar escalar a nivel crítico.',bg:'var(--amber-l)',color:'var(--amber)'});
+  else if(avgDevol>0) ins.push({icon:'✅',title:'Devoluciones óptimas: '+(avgDevol*100).toFixed(1)+'%',text:'Todas las sucursales dentro del rango óptimo.',bg:'var(--green-l)',color:'var(--green)'});
 
-  if(pctMeta>0) ins.push({icon:'💰',title:`${Math.round(pctMeta*100)}% de meta mensual acumulada`,text:`${fmtPeso(totalVenta)} en ventas esta semana. Meta mensual: ${fmtPeso(metaTotal)}.`,bg:pctMeta>=0.25?'var(--blue-l)':'var(--amber-l)',color:pctMeta>=0.25?'var(--blue)':'var(--amber)'});
+  // Meta mensual
+  if(pctMeta>0) ins.push({icon:'💰',title:Math.round(pctMeta*100)+'% de meta mensual acumulada',text:fmtPeso(totalVenta)+' en ventas esta semana. Meta mensual total: '+fmtPeso(metaTotal)+'.',bg:pctMeta>=0.25?'var(--blue-l)':'var(--amber-l)',color:pctMeta>=0.25?'var(--blue)':'var(--amber)'});
 
-  const peticiones = data.filter(r=>r['Petición a Dirección']&&r['Petición a Dirección'].trim()&&r['Petición a Dirección']!=='None');
+  // Mejor sucursal
+  if(dataInd.length>1) {
+    const best = dataInd.reduce((a,b)=>num(a['Venta Semana'])>num(b['Venta Semana'])?a:b);
+    ins.push({icon:'⭐',title:'Mejor venta: '+best['Sucursal'],text:best['Gerente']+' con '+best['Venta Semana']+' esta semana.',bg:'var(--green-l)',color:'var(--green)'});
+  }
+
+  // Peticiones
+  const peticiones = dataBase.filter(r=>r['Petición a Dirección']&&r['Petición a Dirección'].trim()&&r['Petición a Dirección']!=='None');
   if(peticiones.length>0) ins.push({icon:'📋',title:peticiones.length+' petición'+(peticiones.length>1?'es':'')+' a Dirección',text:peticiones.map(r=>'• '+r['Sucursal']+': '+r['Petición a Dirección']).join(' | '),bg:'var(--purple-l)',color:'var(--purple)'});
 
-  el.innerHTML = ins.length ? ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
+  el.innerHTML = ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
     <div class="insight-icon">${i.icon}</div>
-    <div><div class="insight-title" style="color:${i.color}">${i.title}</div><div class="insight-text" style="white-space:pre-line">${i.text}</div></div>
-  </div>`).join('') : '<div class="empty">Sin datos suficientes para análisis</div>';
+    <div><div class="insight-title" style="color:${i.color}">${i.title}</div><div class="insight-text">${i.text}</div></div>
+  </div>`).join('');
 }
 
 // ══════════════════════════════════════
