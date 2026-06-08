@@ -926,6 +926,14 @@ const num = v => {
   const n = parseFloat(s);
   return isNaN(n)?0:n;
 };
+const fmtPesoStr = s => {
+  // Reformat money string from sheet (e.g. "$690,045") to peso sign
+  if(!s||s==='—') return '—';
+  const n = num(s);
+  if(!n) return s;
+  return fmtPeso(n);
+};
+
 const numPct = v => {
   // handles "3.4%", "0.034", "3.4"
   const s = String(v||'').trim();
@@ -1597,7 +1605,7 @@ function renderRendicion() {
       </td>
       <td style="white-space:nowrap"><div style="font-weight:600;font-size:13px">Sem. ${r['Semana']||'—'}</div><div style="color:var(--text3);font-size:11px">${r['Mes']||''} ${r['Año']||''}</div></td>
       <td>
-        <div style="font-weight:800;font-size:15px;color:var(--green)">${r['Venta Semana']||'—'}</div>
+        <div style="font-weight:800;font-size:15px;color:var(--green)">${fmtPesoStr(r['Venta Semana'])}</div>
         ${meta>0?`<div style="margin-top:4px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctMeta,100)}%;background:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--amber)':'var(--rose)'}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">${pctMeta}% de ${r['Meta Mensual']}</div></div>`:''}
       </td>
       <td>${logroBadge}</td>
@@ -1691,12 +1699,12 @@ function showRendicionDetalle(id) {
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
       <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Venta Semana</div>
-        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--green)">${r['Venta Semana']||'—'}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--green)">${fmtPesoStr(r['Venta Semana'])}</div>
         ${meta>0?`<div style="margin-top:6px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctMeta,100)}%;background:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--amber)':'var(--rose)'}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:3px">${pctMeta}% de meta</div></div>`:''}
       </div>
       <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Meta Mensual</div>
-        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--blue)">${r['Meta Mensual']||'—'}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--blue)">${fmtPesoStr(r['Meta Mensual'])}</div>
       </div>
       <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">% Devoluciones</div>
@@ -1706,7 +1714,7 @@ function showRendicionDetalle(id) {
       <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Ticket Promedio</div>
         <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--teal)">${r['Ticket Promedio']||'—'}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Monto devol: ${r['Monto Devol.']||'—'}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Monto devol: ${fmtPesoStr(r['Monto Devol.'])}</div>
       </div>
     </div>
     <!-- Campos cualitativos -->
@@ -1738,9 +1746,11 @@ function detBox(label, val, color) {
 
 function fmtPeso(n) {
   if(!n||isNaN(n)) return '—';
-  if(n>=1000000) return 'MX$'+(n/1000000).toFixed(1)+'M';
-  if(n>=1000) return 'MX$'+Math.round(n/1000)+'K';
-  return 'MX$'+Math.round(n).toLocaleString('es-MX');
+  const abs = Math.abs(n);
+  const sign = n<0?'-':'';
+  if(abs>=1000000) return sign+'$'+(abs/1000000).toFixed(2)+'M';
+  if(abs>=1000) return sign+'$'+(abs/1000).toFixed(1)+'K';
+  return sign+'$'+Math.round(abs).toLocaleString('es-MX');
 }
 
 function renderRendicionInsights(dataBase, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal) {
