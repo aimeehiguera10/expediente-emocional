@@ -653,6 +653,73 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+
+    <!-- ══ VISTA: RENDICIÓN DE CUENTAS ══ -->
+    <div id="view-rendicion" class="view">
+      <div class="topbar">
+        <div><div class="page-title">Rendición de Cuentas</div><div class="page-sub" id="rend-sub">HOLLMAN Track — Seguimiento semanal por sucursal</div></div>
+        <div class="topbar-actions">
+          <select id="rend-semana-filter" onchange="renderRendicion()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none">
+            <option value="">Todas las semanas</option>
+          </select>
+          <button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="g4" id="rend-kpis">
+        <div class="kpi"><div class="kpi-glow" style="background:var(--blue)"></div><div class="kpi-icon" style="background:var(--blue-l)">🏪</div><div class="kpi-label">Sucursales</div><div class="kpi-val" id="rend-k-suc">—</div><div class="kpi-footer"><span class="kpi-sub">Con reporte</span></div></div>
+        <div class="kpi"><div class="kpi-glow" style="background:var(--green)"></div><div class="kpi-icon" style="background:var(--green-l)">💰</div><div class="kpi-label">Venta Total Semana</div><div class="kpi-val" id="rend-k-venta">—</div><div class="kpi-footer"><span class="kpi-sub" id="rend-k-venta-sub">—</span></div></div>
+        <div class="kpi"><div class="kpi-glow" style="background:var(--amber)"></div><div class="kpi-icon" style="background:var(--amber-l)">🎯</div><div class="kpi-label">Objetivos Logrados</div><div class="kpi-val" id="rend-k-obj">—</div><div class="kpi-footer"><span class="kpi-sub">Del total reportado</span></div></div>
+        <div class="kpi"><div class="kpi-glow" style="background:var(--rose)"></div><div class="kpi-icon" style="background:var(--rose-l)">↩️</div><div class="kpi-label">% Devoluciones Prom.</div><div class="kpi-val" id="rend-k-devol">—</div><div class="kpi-footer"><span class="kpi-sub" id="rend-k-devol-estado">—</span></div></div>
+      </div>
+
+      <div class="g21">
+        <!-- Tabla principal -->
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Rendiciones por Sucursal</div></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>Sucursal / Gerente</th><th>Semana</th><th>Objetivo</th><th>¿Se logró?</th>
+                <th>Venta</th><th>% Devol.</th><th>Ticket Prom.</th><th>Acciones</th>
+              </tr></thead>
+              <tbody id="rend-tabla"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Gráfica ventas -->
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Venta por Sucursal</div></div>
+          <div style="height:220px"><canvas id="rend-bar-chart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Detalle de última rendición seleccionada -->
+      <div id="rend-detalle-wrap" style="display:none" class="mb20">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title" id="rend-detalle-title">Detalle de Rendición</div>
+            <button onclick="document.getElementById('rend-detalle-wrap').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+          </div>
+          <div id="rend-detalle-content"></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <!-- Objetivos adicionales -->
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🎯 Objetivos Adicionales</div></div>
+          <div id="rend-obj-adicionales"></div>
+        </div>
+        <!-- Insights -->
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🧠 Análisis de Rendición</div></div>
+          <div id="rend-insights"></div>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 </div>
@@ -665,6 +732,13 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 // ══════════════════════════════════════
 const SHEET_ID = '1mbt_sgYWnF0Ga3s_KCy3SAVq8gQ0n9nbpz-VrHMZXv0';
 const API_KEY  = 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0';
+const HOLLMAN_ID = '1EJSzFaV99tWeF0PJlq0VkYyLpJPC5y5iT5kpGLl-etQ';
+const HOLLMAN_TABS = {
+  base:'BASE DE DATOS',
+  indicadores:'INDICADORES',
+  objAdicionales:'OBJ ADICIONALES',
+};
+
 const TABS = {
   colaboradores:'BD_Colaboradores', checkins:'BD_CheckinColaboradores',
   lideres:'BD_Lideres', rrhh:'BD_RRHH', alertas:'BD_Alertas',
@@ -731,9 +805,12 @@ function logout() {
 function buildNav() {
   let html='';
   if(ROLE==='rrhh') html+=`<div class="sb-section">RRHH</div><button class="sb-item" onclick="switchView('rrhh',this)"><span class="ic">🏢</span>Panel Ejecutivo</button>`;
-  // Lider role: also check if user appears in BD_Lideres_Catalogo
   const esLider = ROLE==='lider'||ROLE==='rrhh';
-  if(esLider) html+=`<div class="sb-section">Liderazgo</div><button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
+  if(esLider) {
+    html+=`<div class="sb-section">Liderazgo</div>`;
+    html+=`<button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
+    html+=`<button class="sb-item" onclick="switchView('rendicion',this)"><span class="ic">📊</span>Rendición de Cuentas</button>`;
+  }
   html+=`<div class="sb-section">Personal</div><button class="sb-item" onclick="switchView('mi',this)"><span class="ic">💙</span>Mi Bienestar</button>`;
   document.getElementById('nav-body').innerHTML=html;
 }
@@ -773,6 +850,18 @@ async function fetchSheet(tab) {
   return rows.slice(1).map(row=>{ const o={}; h.forEach((k,i)=>o[k]=row[i]??''); return o; });
 }
 
+async function fetchSheetFrom(sheetId, tab) {
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(tab)}?key=${API_KEY}`;
+  const r=await fetch(url); if(!r.ok) throw new Error(r.status);
+  const j=await r.json(); const rows=j.values||[];
+  if(rows.length<2) return [];
+  // Skip title row if first cell has emoji
+  let startRow = 0;
+  if(rows[0] && rows[0][0] && /^[📊💰🎯⚙️📋]/.test(String(rows[0][0]))) startRow = 1;
+  const h=rows[startRow];
+  return rows.slice(startRow+1).map(row=>{ const o={}; h.forEach((k,i)=>o[k]=row[i]??''); return o; });
+}
+
 async function loadData() {
   try {
     const [colaboradores,checkins,lideres,rrhh,alertas,planes] = await Promise.all([
@@ -782,7 +871,17 @@ async function loadData() {
     ]);
     let links=[];
     try { links=await fetchSheet('LINKS_Prefill'); } catch(e){}
-    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links};
+    // Load HOLLMAN data
+    let hollmanBase=[], hollmanInd=[], hollmanObj=[];
+    try {
+      [hollmanBase, hollmanInd, hollmanObj] = await Promise.all([
+        fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.base),
+        fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.indicadores),
+        fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.objAdicionales),
+      ]);
+    } catch(e) { console.warn('HOLLMAN no disponible:', e.message); }
+
+    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links,hollmanBase,hollmanInd,hollmanObj};
     if(USER) toast('✅ Datos actualizados');
   } catch(e) {
     console.error('Error:',e);
@@ -790,7 +889,7 @@ async function loadData() {
   }
 }
 
-function renderAll() { renderMi(); if(ROLE==='lider'||ROLE==='rrhh') renderEquipo(); if(ROLE==='rrhh') renderRRHH(); }
+function renderAll() { renderMi(); if(ROLE==='lider'||ROLE==='rrhh') { renderEquipo(); renderRendicion(); } if(ROLE==='rrhh') renderRRHH(); }
 
 // ══════════════════════════════════════
 //  HELPERS
