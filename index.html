@@ -1738,9 +1738,9 @@ function detBox(label, val, color) {
 
 function fmtPeso(n) {
   if(!n||isNaN(n)) return '—';
-  if(n>=1000000) return '$'+( n/1000000).toFixed(1)+'M';
-  if(n>=1000) return '$'+Math.round(n/1000)+'K';
-  return '$'+Math.round(n).toLocaleString('es-MX');
+  if(n>=1000000) return 'MX$'+(n/1000000).toFixed(1)+'M';
+  if(n>=1000) return 'MX$'+Math.round(n/1000)+'K';
+  return 'MX$'+Math.round(n).toLocaleString('es-MX');
 }
 
 function renderRendicionInsights(dataBase, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal) {
