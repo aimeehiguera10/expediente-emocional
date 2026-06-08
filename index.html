@@ -824,6 +824,11 @@ function switchView(id, btn) {
   if(el) el.classList.add('active');
   if(btn) btn.classList.add('active');
   else document.querySelectorAll('.sb-item').forEach(b=>{ if(b.getAttribute('onclick')?.includes("'"+id+"'")) b.classList.add('active'); });
+  // Re-render on tab switch to ensure data is loaded
+  if(id==='rendicion') renderRendicion();
+  if(id==='rrhh') renderRRHH();
+  if(id==='equipo') renderEquipo();
+  if(id==='mi') renderMi();
 }
 
 function updateChip() {
@@ -893,7 +898,7 @@ async function loadData() {
       ]);
     } catch(e) { console.warn('HOLLMAN no disponible:', e.message); }
 
-    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links,hollmanBase,hollmanInd,hollmanObj};
+    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links,hollmanBase,hollmanInd,hollmanObj,hollmanObjAdicionales:hollmanObj};
     if(USER) toast('✅ Datos actualizados');
   } catch(e) {
     console.error('Error:',e);
@@ -1468,6 +1473,223 @@ function buildTrend() {
     who5:sorted.map(k=>{const a=meses[k].who5;return a.length?avg(a):null;}),
     clima:sorted.map(k=>{const a=meses[k].clima;return a.length?avg(a):null;}),
   };
+}
+
+
+// ══════════════════════════════════════
+//  RENDICIÓN DE CUENTAS
+// ══════════════════════════════════════
+function renderRendicion() {
+  const base = DATA.hollmanBase || [];
+  const ind  = DATA.hollmanInd  || [];
+  const obj  = DATA.hollmanObjAdicionales || DATA.hollmanObj || [];
+
+  console.log('renderRendicion base:', base.length, 'ind:', ind.length);
+
+  const tablaEl = document.getElementById('rend-tabla');
+  if(!tablaEl) return;
+
+  if(!base.length) {
+    tablaEl.innerHTML='<tr><td colspan="8" class="empty"><span class="empty-icon">📊</span>Sin datos — intenta Actualizar</td></tr>';
+    return;
+  }
+
+  // Filter by gerente if lider
+  const myName = (USER?.name||'').toLowerCase().trim();
+  const filterByGerente = ROLE==='lider';
+  const filteredBase = filterByGerente ? base.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName.split(' ')[0])) : base;
+  const filteredInd  = filterByGerente ? ind.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName.split(' ')[0])) : ind;
+
+  // Populate semana filter
+  const semanas = [...new Set(filteredBase.map(r=>r['Semana']).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+  const selEl = document.getElementById('rend-semana-filter');
+  if(selEl) {
+    const currentVal = selEl.value;
+    selEl.innerHTML = '<option value="">Todas las semanas</option>' +
+      semanas.map(s=>`<option value="${s}" ${s==currentVal?'selected':''}>${'Semana '+Math.round(Number(s))}</option>`).join('');
+  }
+
+  const semFilt = selEl?.value||'';
+  const data    = semFilt ? filteredBase.filter(r=>String(r['Semana'])===semFilt) : filteredBase;
+  const dataInd = semFilt ? filteredInd.filter(r=>String(r['Semana'])===semFilt)  : filteredInd;
+
+  // KPIs
+  const sucursales = [...new Set(data.map(r=>r['Sucursal']).filter(Boolean))];
+  const totalVenta = dataInd.reduce((a,r)=>a+num(r['Venta Semana']),0);
+  const metaTotal  = dataInd.reduce((a,r)=>a+num(r['Meta Mensual']),0);
+  const logrados   = data.filter(r=>(r['¿Se Logró?']||'').toLowerCase()==='sí'||(r['¿Se Logró?']||'').toLowerCase()==='si').length;
+  const avgDevol   = dataInd.length ? dataInd.reduce((a,r)=>a+num(r['% Devol.']),0)/dataInd.length : 0;
+
+  const kSuc = document.getElementById('rend-k-suc');
+  const kVenta = document.getElementById('rend-k-venta');
+  const kVentaSub = document.getElementById('rend-k-venta-sub');
+  const kObj = document.getElementById('rend-k-obj');
+  const kDevol = document.getElementById('rend-k-devol');
+  const kDevolEstado = document.getElementById('rend-k-devol-estado');
+
+  if(kSuc) kSuc.textContent = sucursales.length;
+  if(kVenta) kVenta.textContent = fmtPeso(totalVenta);
+  if(kVentaSub) kVentaSub.textContent = metaTotal ? Math.round((totalVenta/metaTotal)*100)+'% de meta mensual' : '—';
+  if(kObj) kObj.textContent = logrados+'/'+data.length;
+  if(kDevol) kDevol.textContent = (avgDevol*100).toFixed(1)+'%';
+  if(kDevolEstado) kDevolEstado.innerHTML = avgDevol<0.05?badge('Óptimo','bg'):avgDevol<0.10?badge('Preventivo','ba'):badge('Crítico','br');
+
+  // Tabla
+  tablaEl.innerHTML = data.map(r => {
+    const id = r['ID']||'';
+    const indRow = ind.find(i=>i['ID']===id)||{};
+    const logro = (r['¿Se Logró?']||'').toLowerCase();
+    const logroBadge = (logro==='sí'||logro==='si') ? badge('✓ Sí','bg') : logro==='no' ? badge('✗ No','br') : badge(r['¿Se Logró?']||'—','ba');
+    const devol = num(indRow['% Devol.']);
+    const devolColor = devol<0.05?'var(--green)':devol<0.10?'var(--amber)':'var(--rose)';
+    const semana = r['Semana'] ? 'Sem. '+Math.round(Number(r['Semana'])) : '—';
+    const objetivo = (r['Objetivo Ant.']||'—');
+    return `<tr class="exp-row" style="cursor:pointer" data-rendid="${id}" title="Ver detalle">
+      <td><div style="font-weight:700;font-size:13px">${r['Sucursal']||'—'}</div><div style="color:var(--text3);font-size:11px">${r['Gerente']||'—'}</div></td>
+      <td style="color:var(--text2);font-size:12px;white-space:nowrap">${semana}<br>${r['Mes']||''} ${r['Año']||''}</td>
+      <td style="color:var(--text2);font-size:12px;max-width:160px">${objetivo.length>50?objetivo.slice(0,50)+'...':objetivo}</td>
+      <td>${logroBadge}</td>
+      <td style="font-weight:700;color:var(--green)">${fmtPeso(num(indRow['Venta Semana']))}</td>
+      <td style="font-weight:700;color:${devolColor}">${devol?(devol*100).toFixed(1)+'%':'—'}</td>
+      <td style="color:var(--text2)">${indRow['Ticket Promedio']?'$'+Math.round(num(indRow['Ticket Promedio'])).toLocaleString('es-MX'):'—'}</td>
+      <td><span style="color:var(--blue);font-size:12px;font-weight:600">Ver →</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">Sin rendiciones para este período</td></tr>';
+
+  // Attach click events for rendicion rows
+  setTimeout(()=>{
+    document.querySelectorAll('tr[data-rendid]').forEach(row=>{
+      row.onclick = ()=>showRendicionDetalle(row.getAttribute('data-rendid'));
+    });
+  },100);
+
+  // Bar chart
+  const sucVentas = sucursales.map(suc=>{
+    const sucInd = dataInd.filter(r=>r['Sucursal']===suc);
+    return {suc, venta:sucInd.reduce((a,r)=>a+num(r['Venta Semana']),0)};
+  });
+  const chartEl = document.getElementById('rend-bar-chart');
+  if(chartEl) {
+    killChart('rend-bar');
+    CHARTS['rend-bar'] = new Chart(chartEl.getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:sucVentas.map(s=>s.suc),
+        datasets:[{label:'Venta',data:sucVentas.map(s=>s.venta),backgroundColor:'rgba(91,142,240,0.7)',borderRadius:6,borderSkipped:false}]
+      },
+      options:{...chartDefaults,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'  '+fmtPeso(c.raw)}}},
+        scales:{
+          y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4A5268',font:{size:9},callback:v=>fmtPeso(v)}},
+          x:{grid:{display:false},ticks:{color:'#4A5268',font:{size:10}}}
+        }
+      }
+    });
+  }
+
+  // Objetivos adicionales
+  const objFilt = semFilt ? obj.filter(o=>String(o['Semana'])===semFilt) : obj;
+  const objFiltered = filterByGerente ? objFilt.filter(o=>(o['Gerente']||'').toLowerCase().includes(myName.split(' ')[0])) : objFilt;
+  const objEl = document.getElementById('rend-obj-adicionales');
+  if(objEl) {
+    objEl.innerHTML = objFiltered.length ? objFiltered.map(o=>{
+      const estado = (o['Estado']||'').toLowerCase();
+      const cls = (estado.includes('cumplido')&&!estado.includes('no'))?'bg':estado.includes('proceso')?'ba':'br';
+      return `<div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-weight:700;font-size:13px">${o['Sucursal']||'—'}</div>
+          ${badge(o['Estado']||'—',cls)}
+        </div>
+        <div style="font-size:13px;color:var(--text)">${o['Objetivo Adicional']||'—'}</div>
+        ${o['Comentario / Evidencia']?`<div style="font-size:12px;color:var(--text2);margin-top:4px;font-style:italic">${o['Comentario / Evidencia']}</div>`:''}
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">${o['Gerente']||''} · Sem. ${o['Semana']||''}</div>
+      </div>`;
+    }).join('') : '<div class="empty"><span class="empty-icon">🎯</span>Sin objetivos adicionales</div>';
+  }
+
+  renderRendicionInsights(data, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal);
+}
+
+function showRendicionDetalle(id) {
+  const base = (DATA.hollmanBase||[]).find(r=>r['ID']===id);
+  const indRow = (DATA.hollmanInd||[]).find(r=>r['ID']===id);
+  if(!base) return;
+  const devol = num(indRow?.['% Devol.']||0);
+  const devolColor = devol<0.05?'var(--green)':devol<0.10?'var(--amber)':'var(--rose)';
+  document.getElementById('rend-detalle-title').textContent =
+    `${base['Sucursal']} — ${base['Gerente']} — Semana ${Math.round(Number(base['Semana']))} ${base['Mes']||''}`;
+  document.getElementById('rend-detalle-content').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Venta Semana</div>
+        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--green)">${fmtPeso(num(indRow?.['Venta Semana']||0))}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">% Devoluciones</div>
+        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:${devolColor}">${(devol*100).toFixed(1)}%</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${indRow?.['Sem. Devol.']||'—'}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Ticket Promedio</div>
+        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--blue)">$${Math.round(num(indRow?.['Ticket Promedio']||0)).toLocaleString('es-MX')}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${detBox('Objetivo anterior',base['Objetivo Ant.'],'var(--blue)','')}
+      ${detBox('¿Se logró?',base['¿Se Logró?'],(base['¿Se Logró?']||'').toLowerCase()==='sí'?'var(--green)':'var(--rose)','')}
+      ${detBox('Logros obtenidos',base['Logros Obtenidos'],'var(--green)','')}
+      ${detBox('Qué funcionó',base['Qué Funcionó'],'var(--teal)','')}
+      ${detBox('Qué estorbó',base['Qué Estorbó'],'var(--rose)','')}
+      ${detBox('Oportunidades',base['Oportunidades'],'var(--amber)','')}
+      ${detBox('Petición a Dirección',base['Petición a Dirección'],'var(--purple)','')}
+      ${detBox('Nueva meta',base['Nueva Meta'],'var(--blue)','')}
+      ${detBox('Acciones específicas',base['Acciones Específicas'],'var(--teal)','')}
+    </div>
+    ${base['Comentarios']?`<div style="margin-top:16px;background:var(--surface2);border-radius:var(--r-sm);padding:14px"><div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">Comentarios</div><div style="font-size:13px;color:var(--text2)">${base['Comentarios']}</div></div>`:''}
+  `;
+  const wrap = document.getElementById('rend-detalle-wrap');
+  wrap.style.display='block';
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function detBox(label, val, color, sub) {
+  if(!val||val==='None'||val.trim()==='') return '';
+  return `<div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border-left:3px solid ${color}">
+    <div style="font-size:10px;font-weight:700;color:${color};letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">${label}</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.5">${val}</div>
+  </div>`;
+}
+
+function fmtPeso(n) {
+  if(!n||isNaN(n)) return '—';
+  return '$'+Math.round(n).toLocaleString('es-MX');
+}
+
+function renderRendicionInsights(data, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal) {
+  const el = document.getElementById('rend-insights');
+  if(!el) return;
+  const ins = [];
+  const pctMeta = metaTotal ? totalVenta/metaTotal : 0;
+  const pctLogrado = data.length ? logrados/data.length : 0;
+
+  if(pctLogrado>=0.8) ins.push({icon:'🏆',title:`${Math.round(pctLogrado*100)}% de objetivos logrados`,text:`${logrados} de ${data.length} sucursales cumplieron su objetivo esta semana.`,bg:'var(--green-l)',color:'var(--green)'});
+  else if(pctLogrado>=0.5) ins.push({icon:'📈',title:`${Math.round(pctLogrado*100)}% de objetivos logrados`,text:`${logrados} de ${data.length} sucursales lograron su objetivo. Hay oportunidad de mejora en ${data.length-logrados}.`,bg:'var(--amber-l)',color:'var(--amber)'});
+  else if(data.length>0) ins.push({icon:'⚠️',title:`Solo ${Math.round(pctLogrado*100)}% logró su objetivo`,text:`${data.length-logrados} sucursales no alcanzaron su meta. Revisar obstáculos reportados.`,bg:'var(--rose-l)',color:'var(--rose)'});
+
+  if(avgDevol>0.10) ins.push({icon:'↩️',title:`Devoluciones críticas: ${(avgDevol*100).toFixed(1)}%`,text:'Por encima del umbral crítico (10%). Requiere acción inmediata.',bg:'var(--rose-l)',color:'var(--rose)'});
+  else if(avgDevol>0.05) ins.push({icon:'⚡',title:`Devoluciones en nivel preventivo: ${(avgDevol*100).toFixed(1)}%`,text:'Entre 5% y 10%. Monitorear de cerca.',bg:'var(--amber-l)',color:'var(--amber)'});
+  else if(avgDevol>0) ins.push({icon:'✅',title:`Devoluciones óptimas: ${(avgDevol*100).toFixed(1)}%`,text:'Dentro del rango óptimo (menos del 5%).',bg:'var(--green-l)',color:'var(--green)'});
+
+  if(pctMeta>0) ins.push({icon:'💰',title:`${Math.round(pctMeta*100)}% de meta mensual acumulada`,text:`${fmtPeso(totalVenta)} en ventas esta semana. Meta mensual: ${fmtPeso(metaTotal)}.`,bg:pctMeta>=0.25?'var(--blue-l)':'var(--amber-l)',color:pctMeta>=0.25?'var(--blue)':'var(--amber)'});
+
+  const peticiones = data.filter(r=>r['Petición a Dirección']&&r['Petición a Dirección'].trim()&&r['Petición a Dirección']!=='None');
+  if(peticiones.length>0) ins.push({icon:'📋',title:`${peticiones.length} petición${peticiones.length>1?'es':''} a Dirección`,text:peticiones.map(r=>`• ${r['Sucursal']}: ${r['Petición a Dirección']}`).join('
+'),bg:'var(--purple-l)',color:'var(--purple)'});
+
+  el.innerHTML = ins.length ? ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
+    <div class="insight-icon">${i.icon}</div>
+    <div><div class="insight-title" style="color:${i.color}">${i.title}</div><div class="insight-text" style="white-space:pre-line">${i.text}</div></div>
+  </div>`).join('') : '<div class="empty">Sin datos suficientes para análisis</div>';
 }
 
 // ══════════════════════════════════════
