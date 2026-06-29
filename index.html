@@ -745,8 +745,12 @@ const HOLLMAN_ID = '1xhhhPwvHlpk1pN62ZI5AWPiIuBRfw9-6hIralHcUdqQ';
 const HOLLMAN_TABS = { base:'BASE DE DATOS' };
 
 const TABS = {
-  colaboradores:'BD_Colaboradores', checkins:'BD_CheckinColaboradores',
-  lideres:'BD_Lideres', rrhh:'BD_RRHH', alertas:'BD_Alertas',
+  colaboradores:'BD_Colaboradores',
+  checkins:'BD_CheckinColaboradores',
+  checkinsForm:'Respuestas de formulario 4',
+  lideres:'BD_Lideres',
+  rrhh:'Respuestas de formulario 6',
+  alertas:'BD_Alertas',
   planes:'BD_PlanesAccion',
 };
 
@@ -777,8 +781,12 @@ async function doLogin() {
       return;
     }
     USER  = { email, name:`${emp.nombre} ${emp.apellido_paterno||''}`.trim() };
-    const rawRol = (emp.rol||'colaborador').toLowerCase().trim();
-  ROLE  = rawRol.normalize('NFD').replace(/[\u0300-\u036f]/g,'');  // remove accents: líder→lider
+    // Use pre-normalized _rol if available, else normalize manually
+  ROLE = emp._rol || (emp.rol||'colaborador').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  // Map common variants
+  if(ROLE==='lider'||ROLE==='líder') ROLE='lider';
+  if(ROLE==='colaborador') ROLE='colaborador';
+  if(ROLE==='rrhh') ROLE='rrhh';
     EMPID = emp.empleado_id;
     initApp();
   } catch(e) {
@@ -886,24 +894,94 @@ async function fetchSheetFrom(sheetId, tab) {
 
 async function loadData() {
   try {
-    const [colaboradores,checkins,lideres,rrhh,alertas,planes] = await Promise.all([
-      fetchSheet(TABS.colaboradores), fetchSheet(TABS.checkins),
-      fetchSheet(TABS.lideres),       fetchSheet(TABS.rrhh),
-      fetchSheet(TABS.alertas),       fetchSheet(TABS.planes),
+    const [colaboradores, checkinsRaw, checkinsFormRaw, lideres, rrhhRaw, alertas, planes] = await Promise.all([
+      fetchSheet(TABS.colaboradores),
+      fetchSheet(TABS.checkins),
+      fetchSheet(TABS.checkinsForm).catch(()=>[]),
+      fetchSheet(TABS.lideres),
+      fetchSheet(TABS.rrhh).catch(()=>[]),
+      fetchSheet(TABS.alertas).catch(()=>[]),
+      fetchSheet(TABS.planes).catch(()=>[]),
     ]);
+
+    // Normalize colaboradores: estatus and rol case-insensitive
+    const normalizedColabs = colaboradores.map(c=>({
+      ...c,
+      _estatus: (c.estatus||c.Estatus||'').toLowerCase().trim(),
+      _rol: (c.rol||c.Rol||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(),
+    }));
+
+    // Merge check-ins: BD_CheckinColaboradores + Respuestas de formulario 4
+    // Normalize Form 4 rows to match BD_CheckinColaboradores format
+    const checkinsFromForm = checkinsFormRaw.map(r=>{
+      const who1=num(r['WHO5-1']), who2=num(r['WHO5-2']), who3=num(r['WHO5-3']), who4=num(r['WHO5-4']), who5=num(r['WHO5-5']);
+      const whoTotal = who1+who2+who3+who4+who5;
+      const who5Pct = Math.round((whoTotal/25)*100);
+      const energia=num(r['Energía']||r['Energia']), estres=num(r['Estrés']||r['Estres']);
+      const pert=num(r['Pertenencia']), apoyo=num(r['Apoyo del líder']||r['Apoyo del lider']);
+      const claridad=num(r['Claridad de objetivos']), recup=num(r['Recuperación']||r['Recuperacion']);
+      const climaScore = Math.round(((energia + (6-estres) + pert + apoyo + claridad + recup) / 30) * 100);
+      return {
+        checkin_id: 'form4-'+r['Marca temporal'],
+        empleado_id: String(r['ID del colaborador (no modificar)']||r['ID del colaborador']||'').split('.')[0],
+        fecha_envio: r['Marca temporal'],
+        fecha_respuesta: r['Marca temporal'],
+        energia_1_5: String(energia),
+        estres_1_5: String(estres),
+        pertenencia_1_5: String(pert),
+        apoyo_lider_1_5: String(apoyo),
+        claridad_obj_1_5: String(claridad),
+        recuperacion_1_5: String(recup),
+        who5_total_0_25: String(whoTotal),
+        who5_pct_0_100: String(who5Pct),
+        indice_clima_0_100: String(climaScore),
+        texto_motivo: r['¿Qué te motivó esta semana?']||'',
+        texto_drenaje: r['¿Qué te drenó energía?']||r['¿Qué te dreno energía?']||'',
+        nivel_alerta: who5Pct < 40 ? 'rojo' : who5Pct < 60 ? 'amarillo' : '',
+        _fromForm: true,
+      };
+    });
+
+    // Merge: prefer BD_CheckinColaboradores, supplement with Form 4
+    const existingIds = new Set(checkinsRaw.map(c=>c.checkin_id));
+    const extraCheckins = checkinsFromForm.filter(c=>!existingIds.has(c.checkin_id));
+    const checkins = [...checkinsRaw, ...extraCheckins];
+
+    // Normalize RRHH from Respuestas de formulario 6
+    const rrhh = rrhhRaw.map(r=>({
+      registro_id: r['registro_id']||'form6-'+r['Marca temporal'],
+      empleado_id: String(r['empleado_id']||r['ID del colaborador']||'').split('.')[0],
+      fecha_registro: r['fecha_registro']||r['Fecha de registro']||r['Marca temporal'],
+      tipo_psicometrico: r['tipo_psicometrico']||r['Tipo psicométrico']||r['Tipo psicometrico'],
+      puntaje: r['puntaje']||r['Puntaje'],
+      percentil: r['percentil']||r['Percentil'],
+      interpretacion: r['interpretacion']||r['Interpretación']||r['Interpretacion'],
+      evento_emocional: r['evento_emocional']||r['Evento emocional'],
+      tipo_intervencion: r['tipo_intervencion']||r['Tipo de intervención']||r['Tipo de intervencion'],
+      derivacion_externa: r['derivacion_externa']||r['Intervención externa']||r['Intervencion externa'],
+      resultado: r['resultado']||r['Resultado'],
+      seguimiento: r['seguimiento']||r['Seguimiento'],
+    }));
+
     let links=[];
     try { links=await fetchSheet('LINKS_Prefill'); } catch(e){}
-    // Load HOLLMAN data (nueva estructura: una sola hoja)
+
     let hollmanBase=[];
     try {
       hollmanBase = await fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.base);
-      console.log('HOLLMAN:', hollmanBase.length, 'filas. Keys:', Object.keys(hollmanBase[0]||{}).slice(0,5));
+      console.log('HOLLMAN:', hollmanBase.length, 'filas');
     } catch(e) { console.warn('HOLLMAN error:', e.message); }
-    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links,hollmanBase,hollmanInd:[],hollmanObj:[],hollmanObjAdicionales:[]};
+
+    DATA={
+      colaboradores: normalizedColabs,
+      checkins, lideres, rrhh, alertas, planes, links,
+      hollmanBase, hollmanInd:[], hollmanObj:[], hollmanObjAdicionales:[],
+    };
+    console.log('Data loaded — colabs:', normalizedColabs.length, 'checkins:', checkins.length, 'hollman:', hollmanBase.length);
     if(USER) toast('✅ Datos actualizados');
   } catch(e) {
-    console.error('Error:',e);
-    if(USER) toast('⚠️ Error al cargar datos');
+    console.error('Error cargando datos:',e);
+    if(USER) toast('⚠️ Error al cargar datos: '+e.message);
   }
 }
 
@@ -993,6 +1071,16 @@ function renderMi() {
   const [wlbl,wcls] = W.label(w);
 
   // Ring WHO-5
+  // Patch: if who5_pct missing but total exists, calculate
+  if(!lc.who5_pct_0_100 && lc.who5_total_0_25) {
+    lc.who5_pct_0_100 = String(Math.round((num(lc.who5_total_0_25)/25)*100));
+  }
+  // Patch: if indice_clima missing, calculate from dimensions
+  if(!lc.indice_clima_0_100 && lc.energia_1_5) {
+    const e=num(lc.energia_1_5),s=6-num(lc.estres_1_5),p=num(lc.pertenencia_1_5),
+          a=num(lc.apoyo_lider_1_5),c2=num(lc.claridad_obj_1_5),r=num(lc.recuperacion_1_5);
+    lc.indice_clima_0_100 = String(Math.round(((e+s+p+a+c2+r)/30)*100));
+  }
   document.getElementById('mi-who5-num').textContent = w ? w+'%':'—';
   document.getElementById('mi-who5-num').style.color = W.color(w);
   document.getElementById('mi-ring').style.strokeDasharray = `${(w/100)*circ} ${circ}`;
@@ -1163,7 +1251,7 @@ function renderInsightsMi(hist, lc, emp) {
 //  RENDER: EQUIPO (líder)
 // ══════════════════════════════════════
 function renderEquipo() {
-  const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
+  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='activo'||c.estatus==='ACTIVO'||c.estatus==='Activo');
   const team=ROLE==='rrhh'?activos:activos.filter(c=>c.jefe_id&&String(c.jefe_id).trim()===String(EMPID).trim());
   const allW=team.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
   const allCl=team.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
@@ -1300,7 +1388,7 @@ function renderInsightsEquipo(team, avgW, checkins) {
 //  RENDER: RRHH
 // ══════════════════════════════════════
 function renderRRHH() {
-  const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
+  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='activo'||c.estatus==='ACTIVO'||c.estatus==='Activo');
   const allW=activos.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
   const allCl=activos.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
   const avgW=avg(allW), avgCl=avg(allCl);
@@ -1408,7 +1496,7 @@ function renderTablaRRHH(activos) {
 }
 
 function filtrarRRHH(q) {
-  const activos=(DATA.colaboradores||[]).filter(c=>c.estatus==='ACTIVO');
+  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='activo'||c.estatus==='ACTIVO'||c.estatus==='Activo');
   if(!q.trim()) { renderTablaRRHH(activos); return; }
   renderTablaRRHH(activos.filter(c=>`${c.nombre} ${c.apellido_paterno||''} ${c.apellido_materno||''} ${c.email||''} ${c.area||''} ${c.puesto||''}`.toLowerCase().includes(q.toLowerCase())));
 }
