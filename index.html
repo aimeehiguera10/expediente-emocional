@@ -817,13 +817,20 @@ function logout() {
 // ══════════════════════════════════════
 function buildNav() {
   let html='';
-  if(ROLE==='rrhh') html+=`<div class="sb-section">RRHH</div><button class="sb-item" onclick="switchView('rrhh',this)"><span class="ic">🏢</span>Panel Ejecutivo</button>`;
-  const esLider = ROLE==='lider'||ROLE==='rrhh';
-  if(esLider) {
+  if(ROLE==='rrhh') {
+    // RRHH: Panel Ejecutivo + Mi Equipo + Rendición de Cuentas + Mi Bienestar
+    html+=`<div class="sb-section">RRHH</div>`;
+    html+=`<button class="sb-item" onclick="switchView('rrhh',this)"><span class="ic">🏢</span>Panel Ejecutivo</button>`;
+    html+=`<div class="sb-section">Liderazgo</div>`;
+    html+=`<button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
+    html+=`<button class="sb-item" onclick="switchView('rendicion',this)"><span class="ic">📊</span>Rendición de Cuentas</button>`;
+  } else if(ROLE==='lider') {
+    // Líder: Mi Equipo + Rendición de Cuentas (solo su sucursal) + Mi Bienestar
     html+=`<div class="sb-section">Liderazgo</div>`;
     html+=`<button class="sb-item" onclick="switchView('equipo',this)"><span class="ic">👥</span>Mi Equipo</button>`;
     html+=`<button class="sb-item" onclick="switchView('rendicion',this)"><span class="ic">📊</span>Rendición de Cuentas</button>`;
   }
+  // Colaborador: solo Mi Bienestar
   html+=`<div class="sb-section">Personal</div><button class="sb-item" onclick="switchView('mi',this)"><span class="ic">💙</span>Mi Bienestar</button>`;
   document.getElementById('nav-body').innerHTML=html;
 }
@@ -985,7 +992,11 @@ async function loadData() {
   }
 }
 
-function renderAll() { renderMi(); if(ROLE==='lider'||ROLE==='rrhh') { renderEquipo(); renderRendicion(); } if(ROLE==='rrhh') renderRRHH(); }
+function renderAll() {
+  renderMi();
+  if(ROLE==='lider'||ROLE==='rrhh') { renderEquipo(); renderRendicion(); }
+  if(ROLE==='rrhh') renderRRHH();
+}
 
 // ══════════════════════════════════════
 //  HELPERS
