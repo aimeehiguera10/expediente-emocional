@@ -691,7 +691,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
             <table>
               <thead><tr>
                 <th>Sucursal / Gerente</th><th>Semana</th><th>Venta vs Meta</th>
-                <th>¿Se logró?</th><th>Devoluciones</th><th>Ticket Prom.</th><th></th>
+                <th>¿Se logró?</th><th>Devoluciones</th><th>Ticket</th><th>Llamadas</th><th></th>
               </tr></thead>
               <tbody id="rend-tabla"></tbody>
             </table>
@@ -719,7 +719,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="g2">
         <!-- Objetivos adicionales -->
         <div class="card">
-          <div class="card-hdr"><div class="card-title">🎯 Objetivos Adicionales</div></div>
+          <div class="card-hdr"><div class="card-title">📊 Métricas Adicionales</div></div>
           <div id="rend-obj-adicionales"></div>
         </div>
         <!-- Insights -->
@@ -741,12 +741,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 // ══════════════════════════════════════
 const SHEET_ID = '1mbt_sgYWnF0Ga3s_KCy3SAVq8gQ0n9nbpz-VrHMZXv0';
 const API_KEY  = 'AIzaSyB3KMiHoARczL-df_-mgwSKy8Zq48vpYa0';
-const HOLLMAN_ID = '1EJSzFaV99tWeF0PJlq0VkYyLpJPC5y5iT5kpGLl-etQ';
-const HOLLMAN_TABS = {
-  base:'BASE DE DATOS',
-  indicadores:'INDICADORES',
-  objAdicionales:'OBJ ADICIONALES',
-};
+const HOLLMAN_ID = '1xhhhPwvHlpk1pN62ZI5AWPiIuBRfw9-6hIralHcUdqQ';
+const HOLLMAN_TABS = { base:'BASE DE DATOS' };
 
 const TABS = {
   colaboradores:'BD_Colaboradores', checkins:'BD_CheckinColaboradores',
@@ -897,17 +893,13 @@ async function loadData() {
     ]);
     let links=[];
     try { links=await fetchSheet('LINKS_Prefill'); } catch(e){}
-    // Load HOLLMAN data
-    let hollmanBase=[], hollmanInd=[], hollmanObj=[];
+    // Load HOLLMAN data (nueva estructura: una sola hoja)
+    let hollmanBase=[];
     try {
-      [hollmanBase, hollmanInd, hollmanObj] = await Promise.all([
-        fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.base),
-        fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.indicadores),
-        fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.objAdicionales),
-      ]);
-    } catch(e) { console.warn('HOLLMAN no disponible:', e.message); }
-
-    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links,hollmanBase,hollmanInd,hollmanObj,hollmanObjAdicionales:hollmanObj};
+      hollmanBase = await fetchSheetFrom(HOLLMAN_ID, HOLLMAN_TABS.base);
+      console.log('HOLLMAN:', hollmanBase.length, 'filas. Keys:', Object.keys(hollmanBase[0]||{}).slice(0,5));
+    } catch(e) { console.warn('HOLLMAN error:', e.message); }
+    DATA={colaboradores,checkins,lideres,rrhh,alertas,planes,links,hollmanBase,hollmanInd:[],hollmanObj:[],hollmanObjAdicionales:[]};
     if(USER) toast('✅ Datos actualizados');
   } catch(e) {
     console.error('Error:',e);
@@ -1509,140 +1501,193 @@ function buildTrend() {
 // ══════════════════════════════════════
 //  RENDICIÓN DE CUENTAS
 // ══════════════════════════════════════
+
+// Column mapping for new sheet format
+const HC = {
+  fecha:    'Marca temporal',
+  nombre:   'NOMBRE',
+  sucursal: 'NAVOJOA',          // header literal del Form, contiene la sucursal
+  objetivo: 'Objetivo declarado la semana anterior',
+  logro:    '¿Se logró?',
+  logros:   'Logros obtenidos esta semana',
+  funciono: '¿Qué ayudó o funcionó?',
+  estorbo:  '¿Qué estorbó o bloqueó?',
+  oportunidades: 'Nuevas oportunidades detectadas',
+  peticion: 'Petición o apoyo requerido',
+  nuevaMeta:'Nueva meta para la siguiente semana $$',
+  acciones: 'Acciones específicas para cumplirla',
+  comentarios: 'Comentarios adicionales',
+  meta:     'Meta mensual asignada ($)',
+  venta:    'Venta de la semana ($)',
+  devol:    'Monto de devoluciones ($)',
+  pctDevol: '% Devoluciones',
+  ticket:   'Ticket promedio ($)',
+  llamadas: 'Total de llamadas recibidas (#)',
+  llamPerd: 'Llamadas perdidas (#)',
+  pctLlamPerd: '% Llamadas perdidas',
+  respMsj:  'Tiempo de respuesta de mensajes (min)',
+  cotizado: 'Monto cotizado ($)',
+  vendCot:  'Monto vendido de cotizaciones ($)',
+  pctCierre:'% de cierre',
+};
+
+function hollmanFecha(r) {
+  const s = String(r[HC.fecha]||'').trim();
+  if(!s) return null;
+  return new Date(s);
+}
+
+function hollmanSemana(r) {
+  const d = hollmanFecha(r);
+  if(!d) return 0;
+  const jan1 = new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+}
+
 function renderRendicion() {
   const base = DATA.hollmanBase || [];
-  const ind  = DATA.hollmanInd  || [];
-  const obj  = DATA.hollmanObjAdicionales || DATA.hollmanObj || [];
-
   const tablaEl = document.getElementById('rend-tabla');
   if(!tablaEl) return;
 
-  if(!base.length && !ind.length) {
-    tablaEl.innerHTML='<tr><td colspan="9" class="empty"><span class="empty-icon">📊</span>Sin datos — presiona Actualizar</td></tr>';
-    loadData().then(()=>{ if((DATA.hollmanInd||[]).length) renderRendicion(); });
+  if(!base.length) {
+    tablaEl.innerHTML='<tr><td colspan="8" class="empty"><span class="empty-icon">📊</span>Sin datos — presiona Actualizar</td></tr>';
+    loadData().then(()=>{ if((DATA.hollmanBase||[]).length) renderRendicion(); });
     return;
   }
 
-  const filterByGerente = ROLE==='lider';
+  // ── Enrich rows with parsed date & semana ──
+  const rows = base.map(r=>({
+    ...r,
+    _fecha:   hollmanFecha(r),
+    _semana:  hollmanSemana(r),
+    _sucursal:(r[HC.sucursal]||'').trim(),
+    _gerente: (r[HC.nombre]||'').trim(),
+    _venta:   num(r[HC.venta]),
+    _meta:    num(r[HC.meta]),
+    _devol:   num(r[HC.devol]),
+    _pctDevol:num(r[HC.pctDevol]),
+    _ticket:  num(r[HC.ticket]),
+    _logro:   (r[HC.logro]||'').toLowerCase().trim(),
+    _llamadas:num(r[HC.llamadas]),
+    _llamPerd:num(r[HC.llamPerd]),
+    _cotizado:num(r[HC.cotizado]),
+    _vendCot: num(r[HC.vendCot]),
+    _pctCierre:num(r[HC.pctCierre]),
+  })).filter(r=>r._fecha);
+
+  // ── Lider filter ──
   const myName = (USER?.name||'').toLowerCase().trim().split(' ')[0];
-  const filteredInd  = filterByGerente ? ind.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName)) : ind;
-  const filteredBase = filterByGerente ? base.filter(r=>(r['Gerente']||'').toLowerCase().includes(myName)) : base;
+  const filtered = ROLE==='lider'
+    ? rows.filter(r=>r._gerente.toLowerCase().includes(myName))
+    : rows;
 
   // ── Semana filter ──
-  const semanas = [...new Set(filteredInd.map(r=>r['Semana']).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+  const semanas = [...new Set(filtered.map(r=>r._semana).filter(Boolean))].sort((a,b)=>b-a);
   const selEl = document.getElementById('rend-semana-filter');
   if(selEl) {
     const cv = selEl.value;
     selEl.innerHTML = '<option value="">Todas las semanas</option>' +
-      semanas.map(s=>`<option value="${s}" ${s==cv?'selected':''}>Semana ${s} · ${filteredInd.find(r=>r['Semana']===s)?.['Mes']||''} ${filteredInd.find(r=>r['Semana']===s)?.['Año']||''}</option>`).join('');
+      semanas.map(s=>{
+        const ex = filtered.find(r=>r._semana===s);
+        const lbl = ex?ex._fecha.toLocaleDateString('es-MX',{month:'short',year:'numeric'}):'';
+        return `<option value="${s}" ${String(s)==cv?'selected':''}>Semana ${s} ${lbl?'· '+lbl:''}</option>`;
+      }).join('');
   }
 
   // ── Date range filter ──
   const fechaDesde = document.getElementById('rend-fecha-desde')?.value;
   const fechaHasta = document.getElementById('rend-fecha-hasta')?.value;
-
   const semFilt = selEl?.value||'';
-  let dataInd  = semFilt ? filteredInd.filter(r=>String(r['Semana'])===semFilt)  : filteredInd;
-  let dataBase = semFilt ? filteredBase.filter(r=>String(r['Semana'])===semFilt) : filteredBase;
 
-  // Apply date range filter using Año+Semana approximate
-  if(fechaDesde||fechaHasta) {
-    const semanaToApproxDate = (año, semana) => {
-      const jan1 = new Date(Number(año), 0, 1);
-      return new Date(jan1.getTime() + (Number(semana)-1)*7*24*3600*1000);
-    };
-    dataInd = dataInd.filter(r=>{
-      const d = semanaToApproxDate(r['Año']||2026, r['Semana']||1);
-      if(fechaDesde && d < new Date(fechaDesde)) return false;
-      if(fechaHasta && d > new Date(fechaHasta)) return false;
-      return true;
-    });
-    dataBase = dataBase.filter(r=>{
-      const d = semanaToApproxDate(r['Año']||2026, r['Semana']||1);
-      if(fechaDesde && d < new Date(fechaDesde)) return false;
-      if(fechaHasta && d > new Date(fechaHasta)) return false;
-      return true;
-    });
-  }
+  let data = filtered;
+  if(semFilt) data = data.filter(r=>String(r._semana)===semFilt);
+  if(fechaDesde) data = data.filter(r=>r._fecha >= new Date(fechaDesde));
+  if(fechaHasta) data = data.filter(r=>r._fecha <= new Date(fechaHasta+'T23:59:59'));
 
   // ── KPIs ──
-  const sucursales = [...new Set(dataInd.map(r=>r['Sucursal']).filter(Boolean))];
-  const totalVenta = dataInd.reduce((a,r)=>a+num(r['Venta Semana']),0);
-  const metaTotal  = dataInd.reduce((a,r)=>a+num(r['Meta Mensual']),0);
-  const logrados   = dataBase.filter(r=>{const v=(r['¿Se Logró?']||'').toLowerCase();return v==='sí'||v==='si';}).length;
-  const avgDevol   = dataInd.length ? dataInd.reduce((a,r)=>a+numPct(r['% Devol.']),0)/dataInd.length : 0;
-  const totalDevol = dataInd.reduce((a,r)=>a+num(r['Monto Devol.']),0);
+  const sucursales = [...new Set(data.map(r=>r._sucursal).filter(Boolean))];
+  const totalVenta = data.reduce((a,r)=>a+r._venta, 0);
+  const totalMeta  = data.reduce((a,r)=>a+r._meta, 0);
+  const logrados   = data.filter(r=>r._logro==='sí'||r._logro==='si').length;
+  const avgDevol   = data.length ? data.reduce((a,r)=>a+(r._pctDevol>1?r._pctDevol/100:r._pctDevol),0)/data.length : 0;
+  const totalCot   = data.reduce((a,r)=>a+r._cotizado, 0);
+  const totalVendCot = data.reduce((a,r)=>a+r._vendCot, 0);
+  const pctCierreAvg = data.length ? data.reduce((a,r)=>a+(r._pctCierre>1?r._pctCierre/100:r._pctCierre),0)/data.length : 0;
 
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.innerHTML=v; };
-  set('rend-k-suc', sucursales.length);
+  set('rend-k-suc',   sucursales.length);
   set('rend-k-venta', fmtPeso(totalVenta));
-  set('rend-k-venta-sub', metaTotal ? Math.round((totalVenta/metaTotal)*100)+'% de meta mensual' : '—');
-  set('rend-k-obj', logrados+'/'+dataBase.length);
+  set('rend-k-venta-sub', totalMeta ? Math.round((totalVenta/totalMeta)*100)+'% de meta mensual' : '—');
+  set('rend-k-obj',   logrados+'/'+data.length);
   set('rend-k-devol', (avgDevol*100).toFixed(1)+'%');
   set('rend-k-devol-estado', avgDevol<0.05?badge('Óptimo','bg'):avgDevol<0.10?badge('Preventivo','ba'):badge('Crítico','br'));
 
   // ── Tabla ──
-  tablaEl.innerHTML = dataInd.map(r => {
-    const bRow = dataBase.find(b=>b['ID']===r['ID'])||{};
-    const logro = (bRow['¿Se Logró?']||'').toLowerCase();
-    const logroBadge = (logro==='sí'||logro==='si')?badge('✓ Sí','bg'):logro==='no'?badge('✗ No','br'):bRow['¿Se Logró?']?badge(bRow['¿Se Logró?'],'ba'):'<span style="color:var(--text3)">—</span>';
-    const devol = numPct(r['% Devol.']);
-    const devolColor = devol<0.05?'var(--green)':devol<0.10?'var(--amber)':'var(--rose)';
-    const semDevol = r['Sem. Devol.']||'';
-    const semDevColor = semDevol.includes('ÓPTIMO')?'var(--green)':semDevol.includes('CRÍTICO')?'var(--rose)':'var(--amber)';
-    const venta = num(r['Venta Semana']);
-    const meta  = num(r['Meta Mensual']);
-    const pctMeta = meta>0 ? Math.round((venta/meta)*100) : 0;
-    return `<tr class="rend-row" data-rendid="${r['ID']}" style="cursor:pointer" title="Ver detalle completo">
+  tablaEl.innerHTML = [...data].sort((a,b)=>b._fecha-a._fecha).map((r,i)=>{
+    const logro = r._logro;
+    const logroBadge = (logro==='sí'||logro==='si')?badge('✓ Sí','bg'):logro==='no'?badge('✗ No','br'):badge(r[HC.logro]||'—','ba');
+    const pctD = r._pctDevol>1?r._pctDevol/100:r._pctDevol;
+    const dCol = pctD<0.05?'var(--green)':pctD<0.10?'var(--amber)':'var(--rose)';
+    const pctM = r._meta>0?Math.min(Math.round((r._venta/r._meta)*100),999):0;
+    const mCol = pctM>=90?'var(--green)':pctM>=70?'var(--amber)':'var(--rose)';
+    const semStr = r._fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+    return `<tr class="rend-row" data-rendidx="${i}" style="cursor:pointer" title="Ver detalle">
       <td>
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🏪</div>
+          <div style="width:34px;height:34px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🏪</div>
           <div>
-            <div style="font-weight:700;font-size:13px">${r['Sucursal']||'—'}</div>
-            <div style="color:var(--text3);font-size:11px">${r['Gerente']||'—'}</div>
+            <div style="font-weight:700;font-size:13px">${r._sucursal||'—'}</div>
+            <div style="color:var(--text3);font-size:11px">${r._gerente||'—'}</div>
           </div>
         </div>
       </td>
-      <td style="white-space:nowrap"><div style="font-weight:600;font-size:13px">Sem. ${r['Semana']||'—'}</div><div style="color:var(--text3);font-size:11px">${r['Mes']||''} ${r['Año']||''}</div></td>
+      <td style="white-space:nowrap">
+        <div style="font-weight:600;font-size:12px">Sem. ${r._semana}</div>
+        <div style="color:var(--text3);font-size:11px">${semStr}</div>
+      </td>
       <td>
-        <div style="font-weight:800;font-size:15px;color:var(--green)">${fmtPesoStr(r['Venta Semana'])}</div>
-        ${meta>0?`<div style="margin-top:4px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctMeta,100)}%;background:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--amber)':'var(--rose)'}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">${pctMeta}% de ${r['Meta Mensual']}</div></div>`:''}
+        <div style="font-weight:800;font-size:14px;color:var(--green)">${fmtPeso(r._venta)}</div>
+        ${r._meta?`<div style="margin-top:4px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctM,100)}%;background:${mCol}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">${pctM}% de ${fmtPeso(r._meta)}</div></div>`:''}
       </td>
       <td>${logroBadge}</td>
       <td>
-        <div style="font-weight:700;color:${devolColor}">${r['% Devol.']||'—'}</div>
-        <div style="font-size:11px;color:${semDevColor}">${semDevol.replace(/🔴|🟡|🟢/g,'').trim()}</div>
+        <div style="font-weight:700;color:${dCol}">${(pctD*100).toFixed(1)}%</div>
+        <div style="font-size:11px;color:var(--text3)">${fmtPeso(r._devol)}</div>
       </td>
-      <td style="font-weight:700;color:var(--teal)">${r['Ticket Promedio']||'—'}</td>
-      <td><span style="color:var(--blue);font-size:12px;font-weight:600">Ver detalle →</span></td>
+      <td style="font-weight:700;color:var(--teal)">${r._ticket?fmtPeso(r._ticket):'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${r._llamadas?r._llamadas+' rec / '+r._llamPerd+' perd':'—'}</td>
+      <td><span style="color:var(--blue);font-size:12px;font-weight:600">Ver →</span></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="empty">Sin rendiciones para este período</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="empty">Sin rendiciones para este período</td></tr>';
 
-  // Attach click
+  // Store filtered data for detail clicks
+  window._rendData = [...data].sort((a,b)=>b._fecha-a._fecha);
   setTimeout(()=>{
     document.querySelectorAll('tr.rend-row').forEach(row=>{
-      row.onclick = ()=>showRendicionDetalle(row.getAttribute('data-rendid'));
+      row.onclick = ()=>showRendicionDetalle(parseInt(row.getAttribute('data-rendidx')));
     });
   },50);
 
-  // ── Bar chart ──
+  // ── Bar chart: venta por sucursal ──
   const chartEl = document.getElementById('rend-bar-chart');
   if(chartEl && sucursales.length) {
     const sucData = sucursales.map(suc=>{
-      const rows = dataInd.filter(r=>r['Sucursal']===suc);
-      const venta = rows.reduce((a,r)=>a+num(r['Venta Semana']),0);
-      const meta  = rows.reduce((a,r)=>a+num(r['Meta Mensual']),0);
-      const devol = rows.length ? rows.reduce((a,r)=>a+numPct(r['% Devol.']),0)/rows.length : 0;
-      return {suc, venta, meta, devol};
+      const sucRows = data.filter(r=>r._sucursal===suc);
+      const venta = sucRows.reduce((a,r)=>a+r._venta,0);
+      const meta  = sucRows.length ? sucRows[0]._meta : 0;
+      return {suc, venta, meta};
     });
     killChart('rend-bar');
     CHARTS['rend-bar'] = new Chart(chartEl.getContext('2d'),{
       type:'bar',
       data:{
-        labels:sucData.map(s=>s.suc),
+        labels: sucData.map(s=>s.suc),
         datasets:[
-          {label:'Venta',data:sucData.map(s=>s.venta),backgroundColor:sucData.map(s=>s.venta>=(s.meta*0.9)?'rgba(34,212,114,0.75)':s.venta>=(s.meta*0.7)?'rgba(245,183,49,0.75)':'rgba(240,91,122,0.75)'),borderRadius:8,borderSkipped:false},
-          {label:'Meta',data:sucData.map(s=>s.meta),backgroundColor:'transparent',borderColor:'rgba(255,255,255,0.2)',borderWidth:2,type:'line',pointRadius:4,pointBackgroundColor:'rgba(255,255,255,0.4)'}
+          {label:'Venta',data:sucData.map(s=>s.venta),
+           backgroundColor:sucData.map(s=>s.venta>=(s.meta*0.9)?'rgba(34,212,114,0.75)':s.venta>=(s.meta*0.7)?'rgba(245,183,49,0.75)':'rgba(240,91,122,0.75)'),
+           borderRadius:8,borderSkipped:false},
+          {label:'Meta',data:sucData.map(s=>s.meta),type:'line',borderColor:'rgba(255,255,255,0.3)',
+           backgroundColor:'transparent',borderWidth:2,pointRadius:4,pointBackgroundColor:'rgba(255,255,255,0.5)'},
         ]
       },
       options:{...chartDefaults,
@@ -1656,80 +1701,107 @@ function renderRendicion() {
     });
   }
 
-  // ── Objetivos adicionales ──
-  const objFilt = semFilt ? obj.filter(o=>String(o['Semana'])===semFilt) : obj;
-  const objShow = filterByGerente ? objFilt.filter(o=>(o['Gerente']||'').toLowerCase().includes(myName)) : objFilt;
-  const objEl = document.getElementById('rend-obj-adicionales');
-  if(objEl) {
-    objEl.innerHTML = objShow.length ? objShow.map(o=>{
-      const estado = (o['Estado']||'').toLowerCase();
-      const cls = (estado.includes('cumplido')&&!estado.includes('no'))?'bg':estado.includes('proceso')?'ba':'br';
-      return `<div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-weight:700;font-size:13px">${o['Sucursal']||'—'} <span style="color:var(--text3);font-weight:400;font-size:11px">· ${o['Gerente']||''}</span></div>
-          ${badge(o['Estado']||'—',cls)}
+  // ── Nuevas métricas adicionales ──
+  const metricsEl = document.getElementById('rend-obj-adicionales');
+  if(metricsEl && data.length) {
+    const avgTicket = data.filter(r=>r._ticket>0).length ?
+      data.filter(r=>r._ticket>0).reduce((a,r)=>a+r._ticket,0)/data.filter(r=>r._ticket>0).length : 0;
+    const totalLlam = data.reduce((a,r)=>a+r._llamadas,0);
+    const totalPerd = data.reduce((a,r)=>a+r._llamPerd,0);
+    const pctLlamPerd = totalLlam>0?(totalPerd/totalLlam)*100:0;
+    const pctCierre100 = pctCierreAvg>1?pctCierreAvg:pctCierreAvg*100;
+
+    metricsEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Cotizaciones</div>
+          <div style="font-weight:800;font-size:16px;color:var(--blue)">${fmtPeso(totalCot)}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">Vendido: ${fmtPeso(totalVendCot)}</div>
+          <div style="font-size:11px;color:var(--teal)">${pctCierre100.toFixed(1)}% de cierre</div>
         </div>
-        <div style="font-size:13px;color:var(--text);margin-bottom:6px">${o['Objetivo Adicional']||'—'}</div>
-        ${o['Comentario / Evidencia']?`<div style="font-size:12px;color:var(--text2);font-style:italic;padding:8px;background:var(--surface);border-radius:var(--r-xs)">"${o['Comentario / Evidencia']}"</div>`:''}
-        <div style="font-size:10px;color:var(--text3);margin-top:6px">Sem. ${o['Semana']||'—'}</div>
-      </div>`;
-    }).join('') : '<div class="empty"><span class="empty-icon">🎯</span>Sin objetivos adicionales</div>';
+        <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Llamadas</div>
+          <div style="font-weight:800;font-size:16px;color:${pctLlamPerd>10?'var(--rose)':pctLlamPerd>5?'var(--amber)':'var(--green)'}">${pctLlamPerd.toFixed(1)}% perdidas</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${totalLlam} recibidas · ${totalPerd} perdidas</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Ticket Promedio</div>
+          <div style="font-weight:800;font-size:16px;color:var(--teal)">${fmtPeso(avgTicket)}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Devoluciones Total</div>
+          <div style="font-weight:800;font-size:16px;color:${avgDevol>0.10?'var(--rose)':avgDevol>0.05?'var(--amber)':'var(--green)'}">${fmtPeso(data.reduce((a,r)=>a+r._devol,0))}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${(avgDevol*100).toFixed(1)}% promedio</div>
+        </div>
+      </div>
+    `;
   }
 
-  renderRendicionInsights(dataBase, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal);
+  renderRendicionInsights(data, sucursales, logrados, avgDevol, totalVenta, totalMeta, pctCierreAvg);
 }
 
-function showRendicionDetalle(id) {
-  const r    = (DATA.hollmanInd ||[]).find(x=>x['ID']===id);
-  const base = (DATA.hollmanBase||[]).find(x=>x['ID']===id);
+function showRendicionDetalle(idx) {
+  const r = (window._rendData||[])[idx];
   if(!r) return;
-  const devol = numPct(r['% Devol.']);
-  const devolColor = devol<0.05?'var(--green)':devol<0.10?'var(--amber)':'var(--rose)';
-  const venta = num(r['Venta Semana']);
-  const meta  = num(r['Meta Mensual']);
-  const pctMeta = meta>0?Math.round((venta/meta)*100):0;
-  const semDevol = r['Sem. Devol.']||'';
-  const semColor = semDevol.includes('ÓPTIMO')?'var(--green)':semDevol.includes('CRÍTICO')?'var(--rose)':'var(--amber)';
+  const pctD = r._pctDevol>1?r._pctDevol/100:r._pctDevol;
+  const dCol = pctD<0.05?'var(--green)':pctD<0.10?'var(--amber)':'var(--rose)';
+  const pctM = r._meta>0?Math.round((r._venta/r._meta)*100):0;
+  const mCol = pctM>=90?'var(--green)':pctM>=70?'var(--amber)':'var(--rose)';
+  const pctC = r._pctCierre>1?r._pctCierre:r._pctCierre*100;
+  const pctLP= r._llamadas>0?Math.round((r._llamPerd/r._llamadas)*100):0;
 
   document.getElementById('rend-detalle-title').textContent =
-    `${r['Sucursal']} · ${r['Gerente']} · Semana ${r['Semana']} ${r['Mes']||''} ${r['Año']||''}`;
+    `${r._sucursal} · ${r._gerente} · Sem. ${r._semana} · ${r._fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
 
   document.getElementById('rend-detalle-content').innerHTML = `
-    <!-- Métricas principales -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Venta Semana</div>
-        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--green)">${fmtPesoStr(r['Venta Semana'])}</div>
-        ${meta>0?`<div style="margin-top:6px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctMeta,100)}%;background:${pctMeta>=90?'var(--green)':pctMeta>=70?'var(--amber)':'var(--rose)'}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:3px">${pctMeta}% de meta</div></div>`:''}
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Venta Semana</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--green)">${fmtPeso(r._venta)}</div>
+        ${r._meta?`<div style="margin-top:6px"><div class="prog"><div class="prog-fill" style="width:${Math.min(pctM,100)}%;background:${mCol}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">${pctM}% de ${fmtPeso(r._meta)}</div></div>`:''}
       </div>
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Meta Mensual</div>
-        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--blue)">${fmtPesoStr(r['Meta Mensual'])}</div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">% Devoluciones</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:${dCol}">${(pctD*100).toFixed(1)}%</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${fmtPeso(r._devol)} en devol.</div>
       </div>
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">% Devoluciones</div>
-        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:${devolColor}">${r['% Devol.']||'—'}</div>
-        <div style="font-size:11px;color:${semColor};margin-top:4px">${semDevol.replace(/🔴|🟡|🟢/g,'').trim()}</div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Ticket Promedio</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--teal)">${fmtPeso(r._ticket)}</div>
       </div>
-      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:16px;text-align:center;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Ticket Promedio</div>
-        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--teal)">${r['Ticket Promedio']||'—'}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Monto devol: ${fmtPesoStr(r['Monto Devol.'])}</div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Cotizaciones</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--blue)">${pctC.toFixed(1)}% cierre</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${fmtPeso(r._vendCot)} / ${fmtPeso(r._cotizado)}</div>
       </div>
     </div>
-    <!-- Campos cualitativos -->
-    ${base ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${detBox('Objetivo de la semana anterior', base['Objetivo Ant.'], 'var(--blue)')}
-      ${detBox('¿Se logró?', base['¿Se Logró?'], (base['¿Se Logró?']||'').toLowerCase()==='sí'?'var(--green)':'var(--rose)')}
-      ${detBox('Logros obtenidos', base['Logros Obtenidos'], 'var(--green)')}
-      ${detBox('¿Qué funcionó?', base['Qué Funcionó'], 'var(--teal)')}
-      ${detBox('¿Qué estorbó?', base['Qué Estorbó'], 'var(--rose)')}
-      ${detBox('Oportunidades identificadas', base['Oportunidades'], 'var(--amber)')}
-      ${detBox('Nueva meta para la semana', base['Nueva Meta'], 'var(--blue)')}
-      ${detBox('Acciones específicas', base['Acciones Específicas'], 'var(--teal)')}
-      ${detBox('Petición a Dirección', base['Petición a Dirección'], 'var(--purple)')}
-      ${detBox('Comentarios', base['Comentarios'], 'var(--text2)')}
-    </div>` : '<div class="empty">Sin datos cualitativos para esta rendición</div>'}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Llamadas</div>
+        <div style="font-weight:700;color:${pctLP>10?'var(--rose)':pctLP>5?'var(--amber)':'var(--green)'}">${pctLP}% perdidas</div>
+        <div style="font-size:11px;color:var(--text2)">${r._llamadas} recibidas · ${r._llamPerd} perdidas</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Resp. Mensajes</div>
+        <div style="font-weight:700;color:var(--teal)">${r[HC.respMsj]||'—'}</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Meta Mensual</div>
+        <div style="font-weight:700;color:var(--blue)">${fmtPeso(r._meta)}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${detBox('Objetivo semana anterior', r[HC.objetivo], 'var(--blue)')}
+      ${detBox('¿Se logró?', r[HC.logro], r._logro==='sí'||r._logro==='si'?'var(--green)':'var(--rose)')}
+      ${detBox('Logros obtenidos', r[HC.logros], 'var(--green)')}
+      ${detBox('¿Qué funcionó?', r[HC.funciono], 'var(--teal)')}
+      ${detBox('¿Qué estorbó?', r[HC.estorbo], 'var(--rose)')}
+      ${detBox('Nuevas oportunidades', r[HC.oportunidades], 'var(--amber)')}
+      ${detBox('Nueva meta para la semana', r[HC.nuevaMeta], 'var(--blue)')}
+      ${detBox('Acciones específicas', r[HC.acciones], 'var(--teal)')}
+      ${detBox('Petición a Dirección', r[HC.peticion], 'var(--purple)')}
+      ${detBox('Comentarios', r[HC.comentarios], 'var(--text2)')}
+    </div>
   `;
   const wrap = document.getElementById('rend-detalle-wrap');
   wrap.style.display='block';
@@ -1737,7 +1809,7 @@ function showRendicionDetalle(id) {
 }
 
 function detBox(label, val, color) {
-  if(!val||String(val).trim()===''||val==='None') return '';
+  if(!val||String(val).trim()===''||val==='None'||val==='null') return '';
   return `<div style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;border-left:3px solid ${color}">
     <div style="font-size:10px;font-weight:700;color:${color};letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px">${label}</div>
     <div style="font-size:13px;color:var(--text);line-height:1.6">${val}</div>
@@ -1745,44 +1817,47 @@ function detBox(label, val, color) {
 }
 
 function fmtPeso(n) {
-  if(!n||isNaN(n)) return '—';
-  const abs = Math.abs(n);
-  const sign = n<0?'-':'';
+  if(!n||isNaN(n)||n===0) return '—';
+  const abs = Math.abs(n), sign = n<0?'-':'';
   if(abs>=1000000) return sign+'$'+(abs/1000000).toFixed(2)+'M';
-  if(abs>=1000) return sign+'$'+(abs/1000).toFixed(1)+'K';
+  if(abs>=1000)    return sign+'$'+(abs/1000).toFixed(1)+'K';
   return sign+'$'+Math.round(abs).toLocaleString('es-MX');
 }
 
-function renderRendicionInsights(dataBase, dataInd, sucursales, logrados, avgDevol, totalVenta, metaTotal) {
+function renderRendicionInsights(data, sucursales, logrados, avgDevol, totalVenta, totalMeta, pctCierre) {
   const el = document.getElementById('rend-insights');
-  if(!el||!dataInd.length) return;
+  if(!el||!data.length) return;
   const ins = [];
-  const pctLogrado = dataBase.length ? logrados/dataBase.length : 0;
-  const pctMeta = metaTotal>0 ? totalVenta/metaTotal : 0;
+  const pctLog = data.length?logrados/data.length:0;
+  const pctMeta = totalMeta>0?totalVenta/totalMeta:0;
 
   // Cumplimiento
-  if(pctLogrado>=0.8) ins.push({icon:'🏆',title:Math.round(pctLogrado*100)+'% de objetivos logrados',text:logrados+' de '+dataBase.length+' sucursales cumplieron su objetivo esta semana. ¡Excelente desempeño!',bg:'var(--green-l)',color:'var(--green)'});
-  else if(pctLogrado>=0.5) ins.push({icon:'📈',title:Math.round(pctLogrado*100)+'% de objetivos logrados',text:'Hay oportunidad de mejora en '+(dataBase.length-logrados)+' sucursal'+(dataBase.length-logrados>1?'es':'')+'.',bg:'var(--amber-l)',color:'var(--amber)'});
-  else if(dataBase.length>0) ins.push({icon:'⚠️',title:'Solo '+Math.round(pctLogrado*100)+'% logró su objetivo',text:(dataBase.length-logrados)+' sucursal'+(dataBase.length-logrados>1?'es':'')+' no alcanzaron su meta.',bg:'var(--rose-l)',color:'var(--rose)'});
+  if(pctLog>=0.8) ins.push({icon:'🏆',title:Math.round(pctLog*100)+'% de objetivos logrados',text:logrados+' de '+data.length+' sucursales cumplieron su objetivo.',bg:'var(--green-l)',color:'var(--green)'});
+  else if(pctLog>=0.5) ins.push({icon:'📈',title:Math.round(pctLog*100)+'% de objetivos logrados',text:'Hay oportunidad de mejora en '+(data.length-logrados)+' sucursal'+(data.length-logrados>1?'es':'')+'.',bg:'var(--amber-l)',color:'var(--amber)'});
+  else if(data.length>0) ins.push({icon:'⚠️',title:'Solo '+Math.round(pctLog*100)+'% logró su objetivo',text:(data.length-logrados)+' sucursales no alcanzaron su meta.',bg:'var(--rose-l)',color:'var(--rose)'});
 
   // Devoluciones
-  const criticas = dataInd.filter(r=>(r['Sem. Devol.']||'').includes('CRÍTICO'));
-  if(criticas.length>0) ins.push({icon:'↩️',title:criticas.length+' sucursal'+(criticas.length>1?'es':'')+' en nivel crítico de devoluciones',text:'Sucursales: '+criticas.map(r=>r['Sucursal']).join(', ')+'. Requieren acción inmediata.',bg:'var(--rose-l)',color:'var(--rose)'});
-  else if(avgDevol>0.05) ins.push({icon:'⚡',title:'Devoluciones en nivel preventivo: '+(avgDevol*100).toFixed(1)+'%',text:'Monitorear de cerca para evitar escalar a nivel crítico.',bg:'var(--amber-l)',color:'var(--amber)'});
-  else if(avgDevol>0) ins.push({icon:'✅',title:'Devoluciones óptimas: '+(avgDevol*100).toFixed(1)+'%',text:'Todas las sucursales dentro del rango óptimo.',bg:'var(--green-l)',color:'var(--green)'});
+  const criticas = data.filter(r=>{const p=r._pctDevol>1?r._pctDevol/100:r._pctDevol; return p>0.10;});
+  if(criticas.length>0) ins.push({icon:'↩️',title:criticas.length+' sucursal'+(criticas.length>1?'es':'')+' con devoluciones críticas',text:criticas.map(r=>r._sucursal+': '+(r._pctDevol>1?r._pctDevol.toFixed(1):( r._pctDevol*100).toFixed(1))+'%').join(' · '),bg:'var(--rose-l)',color:'var(--rose)'});
+  else if(avgDevol>0.05) ins.push({icon:'⚡',title:'Devoluciones en nivel preventivo: '+(avgDevol*100).toFixed(1)+'%',text:'Monitorear para evitar escalar a crítico.',bg:'var(--amber-l)',color:'var(--amber)'});
+  else ins.push({icon:'✅',title:'Devoluciones óptimas: '+(avgDevol*100).toFixed(1)+'%',text:'Todas las sucursales dentro del rango óptimo.',bg:'var(--green-l)',color:'var(--green)'});
 
   // Meta mensual
-  if(pctMeta>0) ins.push({icon:'💰',title:Math.round(pctMeta*100)+'% de meta mensual acumulada',text:fmtPeso(totalVenta)+' en ventas esta semana. Meta mensual total: '+fmtPeso(metaTotal)+'.',bg:pctMeta>=0.25?'var(--blue-l)':'var(--amber-l)',color:pctMeta>=0.25?'var(--blue)':'var(--amber)'});
+  if(pctMeta>0) ins.push({icon:'💰',title:Math.round(pctMeta*100)+'% de meta mensual acumulada',text:'Venta: '+fmtPeso(totalVenta)+' · Meta: '+fmtPeso(totalMeta),bg:pctMeta>=0.25?'var(--blue-l)':'var(--amber-l)',color:pctMeta>=0.25?'var(--blue)':'var(--amber)'});
+
+  // Cotizaciones
+  const pctC100 = pctCierre>1?pctCierre:pctCierre*100;
+  if(pctC100>0) ins.push({icon:'📝',title:'Cierre de cotizaciones: '+pctC100.toFixed(1)+'%',text:pctC100>=50?'Buen índice de conversión de cotizaciones a ventas.':'Hay oportunidad de mejorar la conversión de cotizaciones.',bg:pctC100>=50?'var(--green-l)':'var(--amber-l)',color:pctC100>=50?'var(--green)':'var(--amber)'});
 
   // Mejor sucursal
-  if(dataInd.length>1) {
-    const best = dataInd.reduce((a,b)=>num(a['Venta Semana'])>num(b['Venta Semana'])?a:b);
-    ins.push({icon:'⭐',title:'Mejor venta: '+best['Sucursal'],text:best['Gerente']+' con '+best['Venta Semana']+' esta semana.',bg:'var(--green-l)',color:'var(--green)'});
+  if(data.length>1) {
+    const best = data.reduce((a,b)=>a._venta>b._venta?a:b);
+    ins.push({icon:'⭐',title:'Mejor venta: '+best._sucursal,text:best._gerente+' · '+fmtPeso(best._venta)+' esta semana',bg:'var(--green-l)',color:'var(--green)'});
   }
 
   // Peticiones
-  const peticiones = dataBase.filter(r=>r['Petición a Dirección']&&r['Petición a Dirección'].trim()&&r['Petición a Dirección']!=='None');
-  if(peticiones.length>0) ins.push({icon:'📋',title:peticiones.length+' petición'+(peticiones.length>1?'es':'')+' a Dirección',text:peticiones.map(r=>'• '+r['Sucursal']+': '+r['Petición a Dirección']).join(' | '),bg:'var(--purple-l)',color:'var(--purple)'});
+  const pets = data.filter(r=>r[HC.peticion]&&String(r[HC.peticion]).trim()&&r[HC.peticion]!=='None');
+  if(pets.length>0) ins.push({icon:'📋',title:pets.length+' petición'+(pets.length>1?'es':'')+' a Dirección',text:pets.map(r=>'• '+r._sucursal+': '+String(r[HC.peticion]).slice(0,60)).join(' | '),bg:'var(--purple-l)',color:'var(--purple)'});
 
   el.innerHTML = ins.map(i=>`<div class="insight" style="background:${i.bg};border-color:${i.color}22">
     <div class="insight-icon">${i.icon}</div>
