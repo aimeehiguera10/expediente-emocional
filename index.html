@@ -745,13 +745,15 @@ const HOLLMAN_ID = '1xhhhPwvHlpk1pN62ZI5AWPiIuBRfw9-6hIralHcUdqQ';
 const HOLLMAN_TABS = { base:'BASE DE DATOS' };
 
 const TABS = {
-  colaboradores:'BD_Colaboradores',
-  checkins:'BD_CheckinColaboradores',
-  checkinsForm:'Respuestas de formulario 4',
-  lideres:'BD_Lideres',
-  rrhh:'Respuestas de formulario 6',
-  alertas:'BD_Alertas',
-  planes:'BD_PlanesAccion',
+  colaboradores:  'BD_Colaboradores',
+  checkins:       'BD_CheckinColaboradores',
+  checkinsForm:   'Respuestas de formulario 4',
+  lideresForm:    'Respuestas de formulario 5',
+  lideres:        'BD_Lideres',
+  rrhhForm:       'Respuestas de formulario 6',
+  alertas:        'BD_Alertas',
+  planes:         'BD_PlanesAccion',
+  links:          'LINKS_Prefill',
 };
 
 // ══════════════════════════════════════
@@ -781,12 +783,8 @@ async function doLogin() {
       return;
     }
     USER  = { email, name:`${emp.nombre} ${emp.apellido_paterno||''}`.trim() };
-    // Use pre-normalized _rol if available, else normalize manually
-  ROLE = emp._rol || (emp.rol||'colaborador').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  // Map common variants
-  if(ROLE==='lider'||ROLE==='líder') ROLE='lider';
-  if(ROLE==='colaborador') ROLE='colaborador';
-  if(ROLE==='rrhh') ROLE='rrhh';
+    ROLE = emp._rol || 'colaborador';
+  if(!['rrhh','lider','colaborador'].includes(ROLE)) ROLE='colaborador';
     EMPID = emp.empleado_id;
     initApp();
   } catch(e) {
@@ -901,77 +899,121 @@ async function fetchSheetFrom(sheetId, tab) {
 
 async function loadData() {
   try {
-    const [colaboradores, checkinsRaw, checkinsFormRaw, lideres, rrhhRaw, alertas, planes] = await Promise.all([
+    const [
+      colaboradores, checkinsRaw, checkinsFormRaw,
+      lideresRaw, lideresFormRaw, rrhhFormRaw,
+      alertas, planes
+    ] = await Promise.all([
       fetchSheet(TABS.colaboradores),
-      fetchSheet(TABS.checkins),
+      fetchSheet(TABS.checkins).catch(()=>[]),
       fetchSheet(TABS.checkinsForm).catch(()=>[]),
-      fetchSheet(TABS.lideres),
-      fetchSheet(TABS.rrhh).catch(()=>[]),
+      fetchSheet(TABS.lideres).catch(()=>[]),
+      fetchSheet(TABS.lideresForm).catch(()=>[]),
+      fetchSheet(TABS.rrhhForm).catch(()=>[]),
       fetchSheet(TABS.alertas).catch(()=>[]),
       fetchSheet(TABS.planes).catch(()=>[]),
     ]);
 
-    // Normalize colaboradores: estatus and rol case-insensitive
+    // ── Normalize colaboradores ──
     const normalizedColabs = colaboradores.map(c=>({
       ...c,
-      _estatus: (c.estatus||c.Estatus||'').toLowerCase().trim(),
-      _rol: (c.rol||c.Rol||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(),
+      empleado_id: String(c.empleado_id||'').split('.')[0].trim(),
+      _estatus: (c.estatus||'').trim().toUpperCase(),
+      _rol: (c.rol||'Colaborador').toLowerCase()
+              .normalize('NFD').replace(/[̀-ͯ]/g,'').trim(),
+      _sucursal: (c.Sucursal||c.sucursal||'').trim(),
     }));
 
-    // Merge check-ins: BD_CheckinColaboradores + Respuestas de formulario 4
-    // Normalize Form 4 rows to match BD_CheckinColaboradores format
+    // ── Normalize check-ins from Form 4 ──
     const checkinsFromForm = checkinsFormRaw.map(r=>{
-      const who1=num(r['WHO5-1']), who2=num(r['WHO5-2']), who3=num(r['WHO5-3']), who4=num(r['WHO5-4']), who5=num(r['WHO5-5']);
+      const who1=num(r['WHO5-1']), who2=num(r['WHO5-2']), who3=num(r['WHO5-3']),
+            who4=num(r['WHO5-4']), who5=num(r['WHO5-5']);
       const whoTotal = who1+who2+who3+who4+who5;
-      const who5Pct = Math.round((whoTotal/25)*100);
-      const energia=num(r['Energía']||r['Energia']), estres=num(r['Estrés']||r['Estres']);
-      const pert=num(r['Pertenencia']), apoyo=num(r['Apoyo del líder']||r['Apoyo del lider']);
-      const claridad=num(r['Claridad de objetivos']), recup=num(r['Recuperación']||r['Recuperacion']);
-      const climaScore = Math.round(((energia + (6-estres) + pert + apoyo + claridad + recup) / 30) * 100);
+      const who5Pct  = Math.round((whoTotal/25)*100);
+      const e=num(r['Energía']||r['Energia']||0);
+      const s=num(r['Estrés']||r['Estres']||0);
+      const p=num(r['Pertenencia']||0);
+      const a=num(r['Apoyo del líder']||r['Apoyo del lider']||0);
+      const c2=num(r['Claridad de objetivos']||0);
+      const rec=num(r['Recuperación']||r['Recuperacion']||0);
+      const climaScore = Math.round(((e+(6-s)+p+a+c2+rec)/30)*100);
+      const empId = String(r['ID del colaborador (no modificar)']||r['ID del colaborador']||'').split('.')[0].trim();
       return {
-        checkin_id: 'form4-'+r['Marca temporal'],
-        empleado_id: String(r['ID del colaborador (no modificar)']||r['ID del colaborador']||'').split('.')[0],
-        fecha_envio: r['Marca temporal'],
-        fecha_respuesta: r['Marca temporal'],
-        energia_1_5: String(energia),
-        estres_1_5: String(estres),
-        pertenencia_1_5: String(pert),
-        apoyo_lider_1_5: String(apoyo),
-        claridad_obj_1_5: String(claridad),
-        recuperacion_1_5: String(recup),
-        who5_total_0_25: String(whoTotal),
-        who5_pct_0_100: String(who5Pct),
-        indice_clima_0_100: String(climaScore),
-        texto_motivo: r['¿Qué te motivó esta semana?']||'',
-        texto_drenaje: r['¿Qué te drenó energía?']||r['¿Qué te dreno energía?']||'',
-        nivel_alerta: who5Pct < 40 ? 'rojo' : who5Pct < 60 ? 'amarillo' : '',
-        _fromForm: true,
+        checkin_id:        'f4-'+r['Marca temporal']+'-'+empId,
+        empleado_id:       empId,
+        fecha_envio:       r['Marca temporal'],
+        fecha_respuesta:   r['Marca temporal'],
+        energia_1_5:       String(e),
+        estres_1_5:        String(s),
+        pertenencia_1_5:   String(p),
+        apoyo_lider_1_5:   String(a),
+        claridad_obj_1_5:  String(c2),
+        recuperacion_1_5:  String(rec),
+        who5_total_0_25:   String(whoTotal),
+        who5_pct_0_100:    String(who5Pct),
+        indice_clima_0_100:String(climaScore),
+        texto_motivo:      r['¿Qué te motivó esta semana?']||'',
+        texto_drenaje:     r['¿Qué te drenó energía?']||r['¿Qué te dreno energía?']||'',
+        nivel_alerta:      who5Pct<40?'rojo':who5Pct<60?'amarillo':'',
       };
     });
 
-    // Merge: prefer BD_CheckinColaboradores, supplement with Form 4
-    const existingIds = new Set(checkinsRaw.map(c=>c.checkin_id));
-    const extraCheckins = checkinsFromForm.filter(c=>!existingIds.has(c.checkin_id));
-    const checkins = [...checkinsRaw, ...extraCheckins];
+    // Merge check-ins: BD base + Form 4, avoid duplicates by empleado_id+fecha
+    const existingKeys = new Set(checkinsRaw.map(c=>
+      String(c.empleado_id).split('.')[0]+'|'+c.fecha_envio
+    ));
+    const extraCheckins = checkinsFromForm.filter(c=>
+      !existingKeys.has(c.empleado_id+'|'+c.fecha_envio)
+    );
+    const checkins = [
+      ...checkinsRaw.map(c=>({...c, empleado_id:String(c.empleado_id).split('.')[0]})),
+      ...extraCheckins
+    ];
 
-    // Normalize RRHH from Respuestas de formulario 6
-    const rrhh = rrhhRaw.map(r=>({
-      registro_id: r['registro_id']||'form6-'+r['Marca temporal'],
-      empleado_id: String(r['empleado_id']||r['ID del colaborador']||'').split('.')[0],
-      fecha_registro: r['fecha_registro']||r['Fecha de registro']||r['Marca temporal'],
-      tipo_psicometrico: r['tipo_psicometrico']||r['Tipo psicométrico']||r['Tipo psicometrico'],
-      puntaje: r['puntaje']||r['Puntaje'],
-      percentil: r['percentil']||r['Percentil'],
-      interpretacion: r['interpretacion']||r['Interpretación']||r['Interpretacion'],
-      evento_emocional: r['evento_emocional']||r['Evento emocional'],
-      tipo_intervencion: r['tipo_intervencion']||r['Tipo de intervención']||r['Tipo de intervencion'],
-      derivacion_externa: r['derivacion_externa']||r['Intervención externa']||r['Intervencion externa'],
-      resultado: r['resultado']||r['Resultado'],
-      seguimiento: r['seguimiento']||r['Seguimiento'],
+    // ── Normalize lider evaluations from Form 5 ──
+    const lideresFromForm = lideresFormRaw.map(r=>({
+      captura_id:         'f5-'+r['Marca temporal'],
+      empleado_id:        String(r['ID del colaborador evaluado']||'').split('.')[0].trim(),
+      jefe_id:            String(r['ID del líder']||r['ID del lider']||'').split('.')[0].trim(),
+      fecha_envio:        r['Marca temporal'],
+      fecha_respuesta:    r['Marca temporal'],
+      cumpl_objetivo_pct: String(r['Cumplimiento de objetivos (%)']||'').replace('%','').trim(),
+      semaforo_objetivo:  String(r['Semáforo de metas (1=Rojo, 3=Verde)']||r['Semaforo de metas (1=Rojo, 3=Verde)']||'').split('.')[0],
+      colaboracion_1_5:   String(r['Colaboración (1 a 5)']||r['Colaboracion (1 a 5)']||'').split('.')[0],
+      puntualidad_1_5:    String(r['Puntualidad (1 a 5)']||'').split('.')[0],
+      disposicion_1_5:    String(r['Disposición (1 a 5)']||r['Disposicion (1 a 5)']||'').split('.')[0],
+      reconocimientos:    r['Reconocimientos']||'',
+      conflictos:         r['Conflictos']||'',
+      plan_accion:        r['Plan de acción']||r['Plan de accion']||'',
+      avance_plan:        String(r['Avance del plan (0-100)']||''),
+      comentarios_lider:  r['Comentarios del líder']||r['Comentarios del lider']||'',
+    }));
+
+    const existingLidKeys = new Set(lideresRaw.map(l=>l.captura_id));
+    const extraLideres = lideresFromForm.filter(l=>!existingLidKeys.has(l.captura_id));
+    const lideres = [
+      ...lideresRaw.map(l=>({...l, empleado_id:String(l.empleado_id).split('.')[0]})),
+      ...extraLideres
+    ];
+
+    // ── Normalize RRHH from Form 6 ──
+    const rrhh = rrhhFormRaw.map(r=>({
+      registro_id:        'f6-'+r['Marca temporal'],
+      empleado_id:        String(r['ID del colaborador']||r['empleado_id']||'').split('.')[0].trim(),
+      fecha_registro:     r['Fecha de registro']||r['Marca temporal'],
+      tipo_psicometrico:  r['Tipo psicométrico']||r['Tipo psicometrico']||r['tipo_psicometrico']||'',
+      puntaje:            r['Puntaje']||r['puntaje']||'',
+      percentil:          r['Percentil']||r['percentil']||'',
+      interpretacion:     r['Interpretación']||r['Interpretacion']||r['interpretacion']||'',
+      evento_emocional:   r['Evento emocional']||r['evento_emocional']||'',
+      tipo_intervencion:  r['Tipo de intervención']||r['Tipo de intervencion']||r['tipo_intervencion']||'',
+      derivacion_externa: r['Intervención externa']||r['derivacion_externa']||'',
+      resultado:          r['Resultado']||r['resultado']||'',
+      seguimiento:        r['Seguimiento']||r['seguimiento']||'',
     }));
 
     let links=[];
-    try { links=await fetchSheet('LINKS_Prefill'); } catch(e){}
+    try { links=await fetchSheet(TABS.links); } catch(e){}
 
     let hollmanBase=[];
     try {
@@ -979,16 +1021,12 @@ async function loadData() {
       console.log('HOLLMAN:', hollmanBase.length, 'filas');
     } catch(e) { console.warn('HOLLMAN error:', e.message); }
 
-    DATA={
-      colaboradores: normalizedColabs,
-      checkins, lideres, rrhh, alertas, planes, links,
-      hollmanBase, hollmanInd:[], hollmanObj:[], hollmanObjAdicionales:[],
-    };
-    console.log('Data loaded — colabs:', normalizedColabs.length, 'checkins:', checkins.length, 'hollman:', hollmanBase.length);
+    DATA = { colaboradores:normalizedColabs, checkins, lideres, rrhh, alertas, planes, links, hollmanBase, hollmanInd:[], hollmanObj:[], hollmanObjAdicionales:[] };
+    console.log('Loaded — colabs:', normalizedColabs.length, 'checkins:', checkins.length, 'lideres:', lideres.length, 'rrhh:', rrhh.length, 'hollman:', hollmanBase.length);
     if(USER) toast('✅ Datos actualizados');
   } catch(e) {
-    console.error('Error cargando datos:',e);
-    if(USER) toast('⚠️ Error al cargar datos: '+e.message);
+    console.error('Error cargando datos:', e);
+    if(USER) toast('⚠️ Error: '+e.message);
   }
 }
 
@@ -1052,8 +1090,8 @@ const W = {
   text:  v => v>=80?'Excelente':v>=60?'Bueno':v>=40?'Moderado':'En riesgo',
 };
 
-const lastCheckin = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id)===String(id)).sort((a,b)=>new Date(b.fecha_envio)-new Date(a.fecha_envio))[0]||null;
-const allCheckins = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id)===String(id)).sort((a,b)=>new Date(a.fecha_envio)-new Date(b.fecha_envio));
+const lastCheckin = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id).split('.')[0].trim()===String(id).split('.')[0].trim()).sort((a,b)=>new Date(b.fecha_envio)-new Date(a.fecha_envio))[0]||null;
+const allCheckins = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id).split('.')[0].trim()===String(id).split('.')[0].trim()).sort((a,b)=>new Date(a.fecha_envio)-new Date(b.fecha_envio));
 
 const chartDefaults = {
   responsive:true, maintainAspectRatio:false,
@@ -1262,7 +1300,7 @@ function renderInsightsMi(hist, lc, emp) {
 //  RENDER: EQUIPO (líder)
 // ══════════════════════════════════════
 function renderEquipo() {
-  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='activo'||c.estatus==='ACTIVO'||c.estatus==='Activo');
+  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='ACTIVO');
   const team=ROLE==='rrhh'?activos:activos.filter(c=>c.jefe_id&&String(c.jefe_id).trim()===String(EMPID).trim());
   const allW=team.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
   const allCl=team.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
@@ -1399,7 +1437,7 @@ function renderInsightsEquipo(team, avgW, checkins) {
 //  RENDER: RRHH
 // ══════════════════════════════════════
 function renderRRHH() {
-  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='activo'||c.estatus==='ACTIVO'||c.estatus==='Activo');
+  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='ACTIVO');
   const allW=activos.map(c=>lastCheckin(c.empleado_id)?.who5_pct_0_100).filter(v=>v!=null).map(Number);
   const allCl=activos.map(c=>lastCheckin(c.empleado_id)?.indice_clima_0_100).filter(v=>v!=null).map(Number);
   const avgW=avg(allW), avgCl=avg(allCl);
@@ -1507,7 +1545,7 @@ function renderTablaRRHH(activos) {
 }
 
 function filtrarRRHH(q) {
-  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='activo'||c.estatus==='ACTIVO'||c.estatus==='Activo');
+  const activos=(DATA.colaboradores||[]).filter(c=>c._estatus==='ACTIVO');
   if(!q.trim()) { renderTablaRRHH(activos); return; }
   renderTablaRRHH(activos.filter(c=>`${c.nombre} ${c.apellido_paterno||''} ${c.apellido_materno||''} ${c.email||''} ${c.area||''} ${c.puesto||''}`.toLowerCase().includes(q.toLowerCase())));
 }
