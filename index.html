@@ -785,7 +785,7 @@ async function doLogin() {
     USER  = { email, name:`${emp.nombre} ${emp.apellido_paterno||''}`.trim() };
     ROLE = emp._rol || 'colaborador';
   if(!['rrhh','lider','colaborador'].includes(ROLE)) ROLE='colaborador';
-    EMPID = emp.empleado_id;
+    EMPID = String(emp.empleado_id||'').replace('.0','').trim();
     initApp();
   } catch(e) {
     errEl.textContent='⚠️ Error de conexión. Intenta de nuevo.';
@@ -917,7 +917,7 @@ async function loadData() {
     // ── Normalize colaboradores ──
     const normalizedColabs = colaboradores.map(c=>({
       ...c,
-      empleado_id: String(c.empleado_id||'').split('.')[0].trim(),
+      empleado_id: String(c.empleado_id||'').replace('.0','').trim(),
       _estatus: (c.estatus||'').trim().toUpperCase(),
       _rol: (c.rol||'Colaborador').toLowerCase()
               .normalize('NFD').replace(/[̀-ͯ]/g,'').trim(),
@@ -937,7 +937,7 @@ async function loadData() {
       const c2=num(r['Claridad de objetivos']||0);
       const rec=num(r['Recuperación']||r['Recuperacion']||0);
       const climaScore = Math.round(((e+(6-s)+p+a+c2+rec)/30)*100);
-      const empId = String(r['ID del colaborador (no modificar)']||r['ID del colaborador']||'').split('.')[0].trim();
+      const empId = String(r['ID del colaborador (no modificar)']||r['ID del colaborador']||'').replace('.0','').trim();
       return {
         checkin_id:        'f4-'+r['Marca temporal']+'-'+empId,
         empleado_id:       empId,
@@ -1062,23 +1062,26 @@ const numPct = v => {
   return n > 1 ? n/100 : n;
 };
 const avg = arr => { const a=arr.filter(v=>v!=null&&!isNaN(v)); return a.length?Math.round(a.reduce((x,y)=>+x+ +y,0)/a.length):0; };
+const parseDate = s => {
+  if(!s) return null;
+  const str = String(s).trim();
+  if(!str) return null;
+  // Format: D/M/YYYY HH:MM:SS or D/M/YYYY
+  const slash = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(slash) {
+    const [,d,m,y] = slash;
+    const time = str.includes(' ') ? str.split(' ')[1] : '00:00:00';
+    return new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${time}`);
+  }
+  // Format: YYYY-MM-DD HH:MM:SS or ISO
+  const dt = new Date(str);
+  return isNaN(dt.getTime()) ? null : dt;
+};
 const fmtDate = d => {
   if(!d) return '—';
-  try {
-    const s = String(d).trim();
-    if(!s) return '—';
-    let dt;
-    // Google Sheets API returns dates as "D/M/YYYY" or "DD/MM/YYYY" or "D/M/YYYY HH:MM:SS"
-    const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if(slashMatch) {
-      const [, day, month, year] = slashMatch;
-      dt = new Date(parseInt(year), parseInt(month)-1, parseInt(day));
-    } else {
-      dt = new Date(s);
-    }
-    if(!dt || isNaN(dt.getTime())) return s.split(/[\s\/]/)[0] || '—';
-    return dt.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-  } catch(e) { return String(d).split(' ')[0] || '—'; }
+  const dt = parseDate(d);
+  if(!dt) return String(d).split(' ')[0]||'—';
+  return dt.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
 };
 const killChart = id => { if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];} };
 const badge = (t,c) => `<span class="badge ${c}">${t}</span>`;
@@ -1090,8 +1093,8 @@ const W = {
   text:  v => v>=80?'Excelente':v>=60?'Bueno':v>=40?'Moderado':'En riesgo',
 };
 
-const lastCheckin = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id).split('.')[0].trim()===String(id).split('.')[0].trim()).sort((a,b)=>new Date(b.fecha_envio)-new Date(a.fecha_envio))[0]||null;
-const allCheckins = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id).split('.')[0].trim()===String(id).split('.')[0].trim()).sort((a,b)=>new Date(a.fecha_envio)-new Date(b.fecha_envio));
+const lastCheckin = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id).replace('.0','').trim()===String(id).replace('.0','').trim()).sort((a,b)=>(parseDate(b.fecha_envio)||0)-(parseDate(a.fecha_envio)||0))[0]||null;
+const allCheckins = id => (DATA.checkins||[]).filter(c=>String(c.empleado_id).replace('.0','').trim()===String(id).replace('.0','').trim()).sort((a,b)=>(parseDate(a.fecha_envio)||0)-(parseDate(b.fecha_envio)||0));
 
 const chartDefaults = {
   responsive:true, maintainAspectRatio:false,
@@ -1620,7 +1623,7 @@ function renderInsightsRRHH(activos, avgW, avgCl, alertasAbiertas, participacion
 function buildTrend() {
   const meses={};
   (DATA.checkins||[]).forEach(c=>{
-    const d=new Date(c.fecha_envio), k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const _d=parseDate(c.fecha_envio)||new Date(); const d=_d; const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     if(!meses[k]) meses[k]={who5:[],clima:[]};
     if(c.who5_pct_0_100) meses[k].who5.push(num(c.who5_pct_0_100));
     if(c.indice_clima_0_100) meses[k].clima.push(num(c.indice_clima_0_100));
